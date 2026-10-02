@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>WebMCP Task Console</title>
+  <title>Agentic PM Dashboard</title>
   <meta name="description" content="Proof of concept for the W3C WebMCP draft: declarative form tools and imperative document.modelContext.registerTool() tools in plain HTML and JavaScript.">
   <style>
     :root {
@@ -167,8 +167,8 @@
   <div class="wrap">
     <header class="top">
       <div class="brand">
-        <h1>WebMCP Task Console</h1>
-        <p>A task dashboard that exposes its features to in-browser agents as WebMCP tools.</p>
+        <h1>Agentic Product Management Dashboard</h1>
+        <p>A product backlog that AI agents in the browser can read and update through WebMCP tools.</p>
       </div>
       <span class="status" id="mcp-status" data-state="pending" role="status">
         <span class="dot" aria-hidden="true"></span><span id="mcp-status-text">detecting modelContext…</span>
@@ -188,16 +188,16 @@
       <div class="stack">
        
         <section class="card" aria-labelledby="create-h">
-          <div class="hd"><h2 id="create-h">New task</h2><span class="tag accent">declarative</span></div>
+          <div class="hd"><h2 id="create-h">New backlog item</h2><span class="tag accent">declarative</span></div>
           <div class="bd">
             <form id="create-task-form"
                   toolname="create_task"
-                  tooldescription="Create a new task in the user's task list. Returns the created task as JSON."
+                  tooldescription="Create a new item in the product backlog. Returns the created task as JSON."
                   toolautosubmit>
               <div class="field">
                 <label for="f-title">Title</label>
                 <input id="f-title" name="title" type="text" required maxlength="120"
-                       placeholder="Draft the SOP outline"
+                       placeholder="Ship onboarding checklist"
                        toolparamdescription="Short, imperative task title (max 120 characters).">
               </div>
               <div class="row">
@@ -221,7 +221,7 @@
                 <input id="f-tags" name="tags" type="text" placeholder="research, writing"
                        toolparamdescription="Optional comma-separated tags.">
               </div>
-              <button class="primary" type="submit">Add task</button>
+              <button class="primary" type="submit">Add to backlog</button>
             </form>
           </div>
         </section>
@@ -247,7 +247,7 @@
 
       <div class="stack">
         <section class="card" aria-labelledby="list-h">
-          <div class="hd"><h2 id="list-h">Tasks</h2><span class="tag" id="list-count">0 shown</span></div>
+          <div class="hd"><h2 id="list-h">Backlog</h2><span class="tag" id="list-count">0 shown</span></div>
           <div class="bd">
             <div class="toolbar">
               <input id="q" type="search" placeholder="Filter by title or tag" aria-label="Filter tasks">
@@ -293,11 +293,11 @@
 
     let nextId = 1;
     const tasks = [
-      seed('Shortlist faculty advisors', 'high', 'in_progress', 7, ['research']),
-      seed('Write Statement of Purpose draft', 'high', 'todo', 14, ['writing', 'sop']),
-      seed('Request recommendation letters', 'medium', 'todo', 10, ['admin']),
-      seed('Publish WebMCP POC to GitHub', 'medium', 'done', -2, ['code']),
-      seed('Read the WebMCP explainer', 'low', 'done', -5, ['research'])
+      seed('Ship self-serve onboarding flow', 'high', 'in_progress', 7, ['growth', 'onboarding']),
+      seed('Fix checkout drop-off on mobile', 'high', 'todo', 14, ['bug', 'payments']),
+      seed('Run pricing page A/B test', 'medium', 'todo', 10, ['experiment']),
+      seed('Write PRD for team workspaces', 'medium', 'done', -2, ['spec']),
+      seed('Synthesize Q3 customer interviews', 'low', 'done', -5, ['research'])
     ];
 
     function seed(title, priority, status, dueInDays, tags) {
@@ -468,7 +468,7 @@
       {
         name: 'query_tasks',
         description:
-          'Search, filter and sort the user\'s tasks. Returns aggregate counts (matched, overdue, byStatus) ' +
+          'Search, filter and sort the product backlog. Returns aggregate counts (matched, overdue, byStatus) ' +
           'and the matching tasks. Use this before update_task_status to find task ids.',
         inputSchema: {
           type: 'object',
@@ -487,7 +487,7 @@
       },
       {
         name: 'update_task_status',
-        description: 'Move one task to a new status. Get the id from query_tasks first.',
+        description: 'Move one backlog item to a new status. Get the id from query_tasks first.',
         inputSchema: {
           type: 'object',
           properties: {

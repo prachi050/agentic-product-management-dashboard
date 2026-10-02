@@ -1,8 +1,8 @@
-# WebMCP Task Console
+# Agentic Product Management Dashboard
 
 A single-file proof of concept (`index.html`, vanilla HTML/CSS/JS, no build step) for **WebMCP**, the draft web standard from the W3C Web Machine Learning Community Group. WebMCP lets a page expose its own functions to an AI agent running in the browser as typed tools, so the agent calls those functions directly and does not have to scrape the DOM or simulate clicks.
 
-The page is a small task dashboard. It exposes three tools:
+The page is a small product backlog dashboard. It exposes three tools:
 
 | Tool | API | What it does |
 |---|---|---|
@@ -33,7 +33,8 @@ Install **Google Chrome Canary** (or Chrome Dev/Beta). WebMCP is an early previe
 WebMCP is only exposed in secure contexts. `http://localhost` counts as secure; `file://` URLs and LAN IP addresses do not.
 
 ```bash
-git clone <this-repo> && cd <this-repo>
+git clone https://github.com/prachi050/agentic-product-management-dashboard.git
+cd agentic-product-management-dashboard
 python3 -m http.server 8000      # or: npx serve .
 ```
 
@@ -44,10 +45,10 @@ Install the **Model Context Tool Inspector** extension from the Chrome Web Store
 
 ### 5. Test the tools
 1. Open the extension on the page. You should see `create_task` (from the form), `query_tasks` and `update_task_status`.
-2. **Declarative:** call `create_task` with `{"title": "Email Prof. X", "priority": "high"}`. The form fills in, highlights while the agent is active (`:tool-form-active`), and submits on its own because of `toolautosubmit`. The inspector should get back `{"ok": true, "task": {...}}`.
+2. **Declarative:** call `create_task` with `{"title": "Add SSO to enterprise plan", "priority": "high"}`. The form fills in, highlights while the agent is active (`:tool-form-active`), and submits on its own because of `toolautosubmit`. The inspector should get back `{"ok": true, "task": {...}}`.
 3. **Imperative:** call `query_tasks` with `{"status": ["todo"], "sortBy": "due"}`, then `update_task_status` with an id from that result.
 4. **Error path:** call `update_task_status` with `{"id": 999, "status": "done"}`. You should get an `isError` result, and the error appears in the *Agent activity* log.
-5. **Agent run:** if the inspector has an agent or model option, give it a goal such as *"Mark my highest-priority open task as in progress and add a task to follow up on it next Friday."* Watch the activity log to see it chain the tools.
+5. **Agent run:** if the inspector has an agent or model option, give it a goal such as *"Move the highest-priority open item to in progress and add a follow-up item due next Friday."* Watch the activity log to see it chain the tools.
 
 ### 6. Test the fallback
 Open the same URL in a browser without the flag (or in Firefox or Safari). The badge turns red, a banner explains why, and the dashboard plus the **Imperative tools** demo buttons still work.
