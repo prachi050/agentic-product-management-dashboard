@@ -1,0 +1,629 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WebMCP Task Console</title>
+  <meta name="description" content="Proof of concept for the W3C WebMCP draft: declarative form tools and imperative document.modelContext.registerTool() tools in plain HTML and JavaScript.">
+  <style>
+    :root {
+      --bg: #0b0d12;
+      --surface: #12151c;
+      --surface-2: #181c25;
+      --border: #242a36;
+      --text: #e6e9ef;
+      --muted: #8a93a6;
+      --accent: #7c9cff;
+      --accent-ink: #0b0d12;
+      --ok: #4ade80;
+      --warn: #fbbf24;
+      --danger: #f87171;
+      --radius: 10px;
+      --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      color-scheme: dark;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font: 14px/1.55 var(--sans);
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: var(--accent); }
+    code, kbd, .mono { font-family: var(--mono); font-size: 12.5px; }
+
+    .wrap { max-width: 1180px; margin: 0 auto; padding: 24px 16px 64px; }
+
+    header.top {
+      display: flex; flex-wrap: wrap; gap: 12px 24px;
+      align-items: center; justify-content: space-between;
+      padding-bottom: 20px; border-bottom: 1px solid var(--border);
+    }
+    .brand h1 { margin: 0; font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }
+    .brand p { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+
+    .status {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 12px; border: 1px solid var(--border); border-radius: 999px;
+      background: var(--surface); font-family: var(--mono); font-size: 12px;
+    }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+    .status[data-state="ready"] .dot { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+    .status[data-state="legacy"] .dot { background: var(--warn); }
+    .status[data-state="missing"] .dot { background: var(--danger); }
+
+    .banner {
+      margin: 20px 0 0; padding: 12px 14px;
+      border: 1px solid color-mix(in srgb, var(--warn) 40%, var(--border));
+      background: color-mix(in srgb, var(--warn) 8%, var(--surface));
+      border-radius: var(--radius); color: var(--text); font-size: 13px;
+    }
+    .banner[hidden] { display: none; }
+
+    .stats {
+      display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px; margin: 20px 0;
+    }
+    .stat {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 14px 16px;
+    }
+    .stat .label { color: var(--muted); font-size: 12px; }
+    .stat .value { font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+    .grid { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 16px; align-items: start; }
+
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden;
+    }
+    .card > .hd {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      padding: 12px 16px; border-bottom: 1px solid var(--border);
+    }
+    .card > .hd h2 { margin: 0; font-size: 13px; font-weight: 600; }
+    .card > .bd { padding: 16px; }
+    .tag {
+      font-family: var(--mono); font-size: 11px; color: var(--muted);
+      padding: 2px 8px; border: 1px solid var(--border); border-radius: 999px;
+    }
+    .tag.accent { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); }
+
+    label { display: block; font-size: 12px; color: var(--muted); margin: 0 0 6px; }
+    .field { margin-bottom: 14px; }
+    input, select, textarea {
+      width: 100%; padding: 9px 11px;
+      background: var(--surface-2); color: var(--text);
+      border: 1px solid var(--border); border-radius: 8px;
+      font: inherit;
+    }
+    input:focus, select:focus, textarea:focus, button:focus-visible {
+      outline: 2px solid var(--accent); outline-offset: 1px;
+    }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+    button {
+      appearance: none; cursor: pointer;
+      padding: 9px 14px; border-radius: 8px; font: inherit; font-weight: 600;
+      border: 1px solid var(--border); background: var(--surface-2); color: var(--text);
+    }
+    button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); width: 100%; }
+    button.ghost { background: transparent; font-weight: 500; padding: 5px 10px; font-size: 12px; }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* Chrome styles forms while an agent is filling / submitting them.
+       Unknown pseudo-classes invalidate a whole rule, so each gets its own. */
+    form:tool-form-active { outline: 2px dashed var(--accent); outline-offset: 6px; }
+    button:tool-submit-active { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 40%, transparent); }
+
+    .toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+    .toolbar input { flex: 1 1 200px; width: auto; }
+    .toolbar select { flex: 0 1 150px; width: auto; }
+
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    th { color: var(--muted); font-weight: 500; font-size: 12px; }
+    tbody tr:last-child td { border-bottom: 0; }
+    tbody tr.flash { animation: flash 1.2s ease-out; }
+    @keyframes flash { from { background: color-mix(in srgb, var(--accent) 22%, transparent); } to { background: transparent; } }
+    .table-scroll { overflow-x: auto; }
+    .empty { color: var(--muted); text-align: center; padding: 24px; }
+
+    .pill { font-family: var(--mono); font-size: 11px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); white-space: nowrap; }
+    .p-high { color: var(--danger); }
+    .p-medium { color: var(--warn); }
+    .p-low { color: var(--muted); }
+    .s-done { color: var(--ok); }
+    .s-in_progress { color: var(--accent); }
+    .s-todo { color: var(--muted); }
+    td.title.done { color: var(--muted); text-decoration: line-through; }
+
+    .log {
+      margin: 0; padding: 12px 16px; max-height: 260px; overflow: auto;
+      font-family: var(--mono); font-size: 12px; line-height: 1.6;
+      background: #07080c; color: var(--muted);
+    }
+    .log .t { color: #4b5263; }
+    .log .info { color: var(--text); }
+    .log .agent { color: var(--accent); }
+    .log .ok { color: var(--ok); }
+    .log .err { color: var(--danger); }
+
+    .stack { display: grid; gap: 16px; }
+    details.schema summary { cursor: pointer; color: var(--muted); font-size: 12px; }
+    details.schema pre { margin: 8px 0 0; padding: 10px; background: #07080c; border-radius: 8px; overflow: auto; font-size: 11.5px; }
+    .harness { display: flex; flex-wrap: wrap; gap: 8px; }
+
+    footer { margin-top: 32px; color: var(--muted); font-size: 12px; }
+
+    @media (max-width: 900px) {
+      .grid { grid-template-columns: minmax(0, 1fr); }
+      .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="top">
+      <div class="brand">
+        <h1>WebMCP Task Console</h1>
+        <p>A task dashboard that exposes its features to in-browser agents as WebMCP tools.</p>
+      </div>
+      <span class="status" id="mcp-status" data-state="pending" role="status">
+        <span class="dot" aria-hidden="true"></span><span id="mcp-status-text">detecting modelContext…</span>
+      </span>
+    </header>
+
+    <div class="banner" id="fallback-banner" hidden></div>
+
+    <section class="stats" aria-label="Task statistics">
+      <div class="stat"><div class="label">Total</div><div class="value" id="stat-total">0</div></div>
+      <div class="stat"><div class="label">To do</div><div class="value" id="stat-todo">0</div></div>
+      <div class="stat"><div class="label">In progress</div><div class="value" id="stat-progress">0</div></div>
+      <div class="stat"><div class="label">Done</div><div class="value" id="stat-done">0</div></div>
+    </section>
+
+    <div class="grid">
+      <div class="stack">
+        <!-- ============================================================
+             1. DECLARATIVE WebMCP
+             The browser reads these attributes and synthesizes a tool:
+               toolname / tooldescription  -> tool name + description
+               toolautosubmit              -> agent may submit without a user click
+               each named control          -> one inputSchema property
+               toolparamdescription        -> that property's description
+             `required`, <select> options and input types become schema
+             constraints, so the agent never has to scrape the DOM.
+             ============================================================ -->
+        <section class="card" aria-labelledby="create-h">
+          <div class="hd"><h2 id="create-h">New task</h2><span class="tag accent">declarative</span></div>
+          <div class="bd">
+            <form id="create-task-form"
+                  toolname="create_task"
+                  tooldescription="Create a new task in the user's task list. Returns the created task as JSON."
+                  toolautosubmit>
+              <div class="field">
+                <label for="f-title">Title</label>
+                <input id="f-title" name="title" type="text" required maxlength="120"
+                       placeholder="Draft the SOP outline"
+                       toolparamdescription="Short, imperative task title (max 120 characters).">
+              </div>
+              <div class="row">
+                <div class="field">
+                  <label for="f-priority">Priority</label>
+                  <select id="f-priority" name="priority" required
+                          toolparamdescription="Task urgency.">
+                    <option value="low">Low</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="high">High</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="f-due">Due date</label>
+                  <input id="f-due" name="due" type="date"
+                         toolparamdescription="Optional due date in YYYY-MM-DD format.">
+                </div>
+              </div>
+              <div class="field">
+                <label for="f-tags">Tags</label>
+                <input id="f-tags" name="tags" type="text" placeholder="research, writing"
+                       toolparamdescription="Optional comma-separated tags.">
+              </div>
+              <button class="primary" type="submit">Add task</button>
+            </form>
+          </div>
+        </section>
+
+        <section class="card" aria-labelledby="tools-h">
+          <div class="hd"><h2 id="tools-h">Imperative tools</h2><span class="tag accent">registerTool()</span></div>
+          <div class="bd">
+            <p style="margin:0 0 12px;color:var(--muted);font-size:13px">
+              Registered from JavaScript. The buttons call the same <code>execute()</code>
+              functions an agent would, so you can try them in any browser.
+            </p>
+            <div class="harness">
+              <button class="ghost" type="button" data-demo="query">query_tasks: open, high first</button>
+              <button class="ghost" type="button" data-demo="advance">update_task_status: next to done</button>
+            </div>
+            <details class="schema" style="margin-top:12px">
+              <summary>View registered tool schemas</summary>
+              <pre id="schema-dump"></pre>
+            </details>
+          </div>
+        </section>
+      </div>
+
+      <div class="stack">
+        <section class="card" aria-labelledby="list-h">
+          <div class="hd"><h2 id="list-h">Tasks</h2><span class="tag" id="list-count">0 shown</span></div>
+          <div class="bd">
+            <div class="toolbar">
+              <input id="q" type="search" placeholder="Filter by title or tag" aria-label="Filter tasks">
+              <select id="status-filter" aria-label="Status filter">
+                <option value="all">All statuses</option>
+                <option value="todo">To do</option>
+                <option value="in_progress">In progress</option>
+                <option value="done">Done</option>
+              </select>
+            </div>
+            <div class="table-scroll">
+              <table>
+                <thead><tr><th>Task</th><th>Priority</th><th>Status</th><th>Due</th><th></th></tr></thead>
+                <tbody id="task-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section class="card" aria-labelledby="log-h">
+          <div class="hd">
+            <h2 id="log-h">Agent activity</h2>
+            <button class="ghost" type="button" id="clear-log">Clear</button>
+          </div>
+          <pre class="log" id="log" aria-live="polite"></pre>
+        </section>
+      </div>
+    </div>
+
+    <footer>
+      Built on the WebMCP draft from the W3C Web Machine Learning Community Group.
+      The page works without WebMCP; agent tools are a progressive enhancement.
+    </footer>
+  </div>
+
+  <script>
+  (() => {
+    'use strict';
+
+    /* ---------------------------------------------------------------
+       State
+       --------------------------------------------------------------- */
+    const STATUSES = ['todo', 'in_progress', 'done'];
+    const PRIORITY_RANK = { high: 0, medium: 1, low: 2 };
+
+    let nextId = 1;
+    const tasks = [
+      seed('Shortlist faculty advisors', 'high', 'in_progress', 7, ['research']),
+      seed('Write Statement of Purpose draft', 'high', 'todo', 14, ['writing', 'sop']),
+      seed('Request recommendation letters', 'medium', 'todo', 10, ['admin']),
+      seed('Publish WebMCP POC to GitHub', 'medium', 'done', -2, ['code']),
+      seed('Read the WebMCP explainer', 'low', 'done', -5, ['research'])
+    ];
+
+    function seed(title, priority, status, dueInDays, tags) {
+      const d = new Date();
+      d.setDate(d.getDate() + dueInDays);
+      return { id: nextId++, title, priority, status, due: d.toISOString().slice(0, 10), tags, createdAt: Date.now() };
+    }
+
+    /* ---------------------------------------------------------------
+       Domain logic. Shared by the UI, the declarative form and the
+       imperative tools so all three behave identically.
+       --------------------------------------------------------------- */
+    function createTask({ title, priority = 'medium', due = '', tags = '' }) {
+      title = String(title ?? '').trim();
+      if (!title) throw new ToolError('title is required.');
+      if (title.length > 120) throw new ToolError('title must be 120 characters or fewer.');
+      if (!(priority in PRIORITY_RANK)) throw new ToolError(`priority must be one of: ${Object.keys(PRIORITY_RANK).join(', ')}.`);
+      if (due && !/^\d{4}-\d{2}-\d{2}$/.test(due)) throw new ToolError('due must use YYYY-MM-DD.');
+
+      const tagList = (Array.isArray(tags) ? tags : String(tags).split(','))
+        .map(t => t.trim().toLowerCase()).filter(Boolean);
+      const task = { id: nextId++, title, priority, status: 'todo', due: due || null, tags: tagList, createdAt: Date.now() };
+      tasks.push(task);
+      render(task.id);
+      return task;
+    }
+
+    function queryTasks({ status = [], priority = [], text = '', dueBefore, sortBy = 'priority', limit = 20 } = {}) {
+      const needle = String(text).trim().toLowerCase();
+      let rows = tasks.filter(t =>
+        (!status.length || status.includes(t.status)) &&
+        (!priority.length || priority.includes(t.priority)) &&
+        (!needle || t.title.toLowerCase().includes(needle) || t.tags.some(tag => tag.includes(needle))) &&
+        (!dueBefore || (t.due && t.due <= dueBefore))
+      );
+
+      const sorters = {
+        priority: (a, b) => PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority] || cmpDue(a, b),
+        due: cmpDue,
+        created: (a, b) => b.createdAt - a.createdAt
+      };
+      rows.sort(sorters[sortBy] ?? sorters.priority);
+
+      const today = new Date().toISOString().slice(0, 10);
+      return {
+        matched: rows.length,
+        overdue: rows.filter(t => t.status !== 'done' && t.due && t.due < today).length,
+        byStatus: Object.fromEntries(STATUSES.map(s => [s, rows.filter(t => t.status === s).length])),
+        tasks: rows.slice(0, Math.max(1, Math.min(100, limit))).map(publicTask)
+      };
+    }
+
+    function updateTaskStatus({ id, status }) {
+      const task = tasks.find(t => t.id === Number(id));
+      if (!task) throw new ToolError(`No task with id ${id}.`);
+      if (!STATUSES.includes(status)) throw new ToolError(`status must be one of: ${STATUSES.join(', ')}.`);
+      const previous = task.status;
+      task.status = status;
+      render(task.id);
+      return { id: task.id, previous, status };
+    }
+
+    function cmpDue(a, b) { return (a.due ?? '9999') .localeCompare(b.due ?? '9999'); }
+    function publicTask({ id, title, priority, status, due, tags }) { return { id, title, priority, status, due, tags }; }
+
+    class ToolError extends Error { constructor(msg) { super(msg); this.name = 'ToolError'; } }
+
+    /* ---------------------------------------------------------------
+       Rendering
+       --------------------------------------------------------------- */
+    const $ = sel => document.querySelector(sel);
+    const body = $('#task-body');
+
+    function render(flashId) {
+      const q = $('#q').value.trim().toLowerCase();
+      const sf = $('#status-filter').value;
+      const view = queryTasks({ status: sf === 'all' ? [] : [sf], text: q, limit: 100 }).tasks;
+
+      body.replaceChildren(...view.map(t => {
+        const tr = document.createElement('tr');
+        if (t.id === flashId) tr.className = 'flash';
+        tr.innerHTML = `
+          <td class="title ${t.status === 'done' ? 'done' : ''}"></td>
+          <td><span class="pill p-${t.priority}">${t.priority}</span></td>
+          <td><span class="pill s-${t.status}">${t.status.replace('_', ' ')}</span></td>
+          <td class="mono">${t.due ?? '—'}</td>
+          <td><button class="ghost" type="button" data-advance="${t.id}" ${t.status === 'done' ? 'disabled' : ''}>Advance</button></td>`;
+        tr.querySelector('.title').textContent = t.title;   // user/agent text: never via innerHTML
+        return tr;
+      }));
+      if (!view.length) body.innerHTML = '<tr><td class="empty" colspan="5">No tasks match.</td></tr>';
+
+      $('#list-count').textContent = `${view.length} shown`;
+      $('#stat-total').textContent = tasks.length;
+      $('#stat-todo').textContent = tasks.filter(t => t.status === 'todo').length;
+      $('#stat-progress').textContent = tasks.filter(t => t.status === 'in_progress').length;
+      $('#stat-done').textContent = tasks.filter(t => t.status === 'done').length;
+    }
+
+    const logEl = $('#log');
+    function log(kind, msg) {
+      const line = document.createElement('div');
+      const t = document.createElement('span');
+      t.className = 't';
+      t.textContent = new Date().toLocaleTimeString([], { hour12: false }) + '  ';
+      const m = document.createElement('span');
+      m.className = kind;
+      m.textContent = msg;
+      line.append(t, m);
+      logEl.append(line);
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    $('#q').addEventListener('input', () => render());
+    $('#status-filter').addEventListener('change', () => render());
+    $('#clear-log').addEventListener('click', () => logEl.replaceChildren());
+    body.addEventListener('click', e => {
+      const id = e.target.closest('[data-advance]')?.dataset.advance;
+      if (!id) return;
+      const task = tasks.find(t => t.id === Number(id));
+      updateTaskStatus({ id, status: STATUSES[Math.min(STATUSES.indexOf(task.status) + 1, 2)] });
+    });
+
+    /* ---------------------------------------------------------------
+       1. DECLARATIVE form handler
+       The same submit listener serves humans and agents.
+       When an agent submits, SubmitEvent.agentInvoked is true and
+       SubmitEvent.respondWith() hands a result back to the model as
+       the tool's output, so the agent gets structured JSON instead of
+       having to read the page again.
+       --------------------------------------------------------------- */
+    const form = $('#create-task-form');
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+      const byAgent = e.agentInvoked === true;
+      const data = Object.fromEntries(new FormData(form));
+
+      let result;
+      try {
+        const task = createTask(data);
+        result = { ok: true, task: publicTask(task) };
+        log(byAgent ? 'agent' : 'info', `${byAgent ? '[agent] ' : ''}create_task -> #${task.id} "${task.title}"`);
+        form.reset();
+      } catch (err) {
+        result = { ok: false, error: err.message };
+        log('err', `create_task failed: ${err.message}`);
+      }
+
+      if (byAgent && typeof e.respondWith === 'function') {
+        e.respondWith(Promise.resolve(result));
+      }
+    });
+
+    // Lifecycle events Chrome fires when an agent fills or abandons a declarative form.
+    window.addEventListener('toolactivated', e => log('agent', `[agent] filling form tool "${e.toolName ?? 'unknown'}"`));
+    window.addEventListener('toolcancel', e => log('agent', `[agent] cancelled form tool "${e.toolName ?? 'unknown'}"`));
+
+    /* ---------------------------------------------------------------
+       2. IMPERATIVE registration via document.modelContext
+       --------------------------------------------------------------- */
+    const ok = data => ({ content: [{ type: 'text', text: JSON.stringify(data) }] });
+    const fail = msg => ({ isError: true, content: [{ type: 'text', text: msg }] });
+
+    // Wrap every execute() so a thrown error becomes a structured tool
+    // error for the model rather than an unhandled rejection.
+    function guarded(name, fn) {
+      return async (input = {}) => {
+        log('agent', `[tool call] ${name}(${JSON.stringify(input)})`);
+        try {
+          const out = await fn(input);
+          log('ok', `${name} ✓`);
+          return ok(out);
+        } catch (err) {
+          const msg = err instanceof ToolError ? err.message : `Internal error in ${name}.`;
+          if (!(err instanceof ToolError)) console.error(err);
+          log('err', `${name} ✗ ${msg}`);
+          return fail(msg);
+        }
+      };
+    }
+
+    const TOOLS = [
+      {
+        name: 'query_tasks',
+        description:
+          'Search, filter and sort the user\'s tasks. Returns aggregate counts (matched, overdue, byStatus) ' +
+          'and the matching tasks. Use this before update_task_status to find task ids.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            status:    { type: 'array', items: { type: 'string', enum: STATUSES }, description: 'Only these statuses. Empty means all.' },
+            priority:  { type: 'array', items: { type: 'string', enum: ['low', 'medium', 'high'] }, description: 'Only these priorities. Empty means all.' },
+            text:      { type: 'string', description: 'Case-insensitive match on title or tag.' },
+            dueBefore: { type: 'string', format: 'date', description: 'Only tasks due on or before this date (YYYY-MM-DD).' },
+            sortBy:    { type: 'string', enum: ['priority', 'due', 'created'], default: 'priority' },
+            limit:     { type: 'integer', minimum: 1, maximum: 100, default: 20 }
+          },
+          additionalProperties: false
+        },
+        annotations: { readOnlyHint: true },
+        execute: guarded('query_tasks', queryTasks)
+      },
+      {
+        name: 'update_task_status',
+        description: 'Move one task to a new status. Get the id from query_tasks first.',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            id:     { type: 'integer', description: 'Task id.' },
+            status: { type: 'string', enum: STATUSES }
+          },
+          required: ['id', 'status'],
+          additionalProperties: false
+        },
+        execute: guarded('update_task_status', updateTaskStatus)
+      }
+    ];
+
+    $('#schema-dump').textContent = JSON.stringify(
+      TOOLS.map(({ name, description, inputSchema, annotations }) => ({ name, description, inputSchema, annotations })),
+      null, 2);
+
+    // Feature detection. document.modelContext is current; navigator.modelContext
+    // shipped in early previews and is deprecated as of Chrome 150.
+    function resolveModelContext() {
+      if (document.modelContext && typeof document.modelContext.registerTool === 'function') {
+        return { ctx: document.modelContext, source: 'document.modelContext' };
+      }
+      if (navigator.modelContext && typeof navigator.modelContext.registerTool === 'function') {
+        return { ctx: navigator.modelContext, source: 'navigator.modelContext (deprecated)' };
+      }
+      return { ctx: null, source: null };
+    }
+
+    const registry = new AbortController();
+
+    function registerImperativeTools() {
+      const statusEl = $('#mcp-status');
+      const statusText = $('#mcp-status-text');
+      const banner = $('#fallback-banner');
+
+      if (!window.isSecureContext) {
+        statusEl.dataset.state = 'missing';
+        statusText.textContent = 'insecure context';
+        banner.hidden = false;
+        banner.textContent = 'WebMCP only runs in a secure context. Serve this page from https:// or http://localhost.';
+        log('err', 'Insecure context: WebMCP is unavailable.');
+        return;
+      }
+
+      const { ctx, source } = resolveModelContext();
+      if (!ctx) {
+        statusEl.dataset.state = 'missing';
+        statusText.textContent = 'WebMCP not available';
+        banner.hidden = false;
+        banner.innerHTML =
+          'This browser does not expose <code>document.modelContext</code>, so no agent can see the tools. ' +
+          'The dashboard still works, and the buttons under <em>Imperative tools</em> run the same handlers. ' +
+          'To test with an agent, enable <code>chrome://flags/#enable-webmcp-testing</code>.';
+        log('info', 'document.modelContext not found. Running without agent tools.');
+        return;
+      }
+
+      let registered = 0;
+      for (const tool of TOOLS) {
+        try {
+          // The AbortSignal unregisters the tool when aborted. Builds that
+          // predate the signal option simply ignore the second argument.
+          ctx.registerTool(tool, { signal: registry.signal });
+          registered++;
+          log('ok', `registered ${tool.name} via ${source}`);
+        } catch (err) {
+          // e.g. InvalidStateError on a duplicate name, TypeError on a bad schema
+          log('err', `registerTool(${tool.name}) failed: ${err.name}: ${err.message}`);
+          console.error(err);
+        }
+      }
+
+      statusEl.dataset.state = source.startsWith('document') ? 'ready' : 'legacy';
+      statusText.textContent = `${source.split(' ')[0]} · ${registered + 1} tools`;
+      if (registered < TOOLS.length) {
+        banner.hidden = false;
+        banner.textContent = `${TOOLS.length - registered} imperative tool(s) failed to register. See the activity log.`;
+      }
+
+      // Remove tools when the page goes away. Fall back to unregisterTool()
+      // for builds without AbortSignal support.
+      window.addEventListener('pagehide', () => {
+        registry.abort();
+        if (typeof ctx.unregisterTool === 'function') {
+          for (const { name } of TOOLS) { try { ctx.unregisterTool(name); } catch { /* already gone */ } }
+        }
+      }, { once: true });
+    }
+
+    /* ---------------------------------------------------------------
+       Local harness: runs the real execute() functions
+       --------------------------------------------------------------- */
+    document.querySelector('.harness').addEventListener('click', async e => {
+      const demo = e.target.closest('[data-demo]')?.dataset.demo;
+      if (demo === 'query') {
+        const res = await TOOLS[0].execute({ status: ['todo', 'in_progress'], sortBy: 'priority', limit: 5 });
+        log('info', res.content[0].text);
+      } else if (demo === 'advance') {
+        const top = queryTasks({ status: ['todo', 'in_progress'], limit: 1 }).tasks[0];
+        if (!top) return log('info', 'Nothing left to complete.');
+        await TOOLS[1].execute({ id: top.id, status: 'done' });
+      }
+    });
+
+    render();
+    registerImperativeTools();
+    log('info', `Declarative tool "create_task" is defined on <form id="create-task-form">.`);
+  })();
+  </script>
+</body>
+</html>
