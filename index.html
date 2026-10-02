@@ -113,8 +113,7 @@
     button.ghost { background: transparent; font-weight: 500; padding: 5px 10px; font-size: 12px; }
     button:disabled { opacity: .5; cursor: not-allowed; }
 
-    /* Chrome styles forms while an agent is filling / submitting them.
-       Unknown pseudo-classes invalidate a whole rule, so each gets its own. */
+    
     form:tool-form-active { outline: 2px dashed var(--accent); outline-offset: 6px; }
     button:tool-submit-active { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 40%, transparent); }
 
@@ -187,16 +186,7 @@
 
     <div class="grid">
       <div class="stack">
-        <!-- ============================================================
-             1. DECLARATIVE WebMCP
-             The browser reads these attributes and synthesizes a tool:
-               toolname / tooldescription  -> tool name + description
-               toolautosubmit              -> agent may submit without a user click
-               each named control          -> one inputSchema property
-               toolparamdescription        -> that property's description
-             `required`, <select> options and input types become schema
-             constraints, so the agent never has to scrape the DOM.
-             ============================================================ -->
+       
         <section class="card" aria-labelledby="create-h">
           <div class="hd"><h2 id="create-h">New task</h2><span class="tag accent">declarative</span></div>
           <div class="bd">
@@ -297,9 +287,7 @@
   (() => {
     'use strict';
 
-    /* ---------------------------------------------------------------
-       State
-       --------------------------------------------------------------- */
+    
     const STATUSES = ['todo', 'in_progress', 'done'];
     const PRIORITY_RANK = { high: 0, medium: 1, low: 2 };
 
@@ -318,10 +306,7 @@
       return { id: nextId++, title, priority, status, due: d.toISOString().slice(0, 10), tags, createdAt: Date.now() };
     }
 
-    /* ---------------------------------------------------------------
-       Domain logic. Shared by the UI, the declarative form and the
-       imperative tools so all three behave identically.
-       --------------------------------------------------------------- */
+   
     function createTask({ title, priority = 'medium', due = '', tags = '' }) {
       title = String(title ?? '').trim();
       if (!title) throw new ToolError('title is required.');
@@ -377,9 +362,7 @@
 
     class ToolError extends Error { constructor(msg) { super(msg); this.name = 'ToolError'; } }
 
-    /* ---------------------------------------------------------------
-       Rendering
-       --------------------------------------------------------------- */
+    
     const $ = sel => document.querySelector(sel);
     const body = $('#task-body');
 
@@ -433,14 +416,7 @@
       updateTaskStatus({ id, status: STATUSES[Math.min(STATUSES.indexOf(task.status) + 1, 2)] });
     });
 
-    /* ---------------------------------------------------------------
-       1. DECLARATIVE form handler
-       The same submit listener serves humans and agents.
-       When an agent submits, SubmitEvent.agentInvoked is true and
-       SubmitEvent.respondWith() hands a result back to the model as
-       the tool's output, so the agent gets structured JSON instead of
-       having to read the page again.
-       --------------------------------------------------------------- */
+   
     const form = $('#create-task-form');
     form.addEventListener('submit', e => {
       e.preventDefault();
@@ -463,18 +439,15 @@
       }
     });
 
-    // Lifecycle events Chrome fires when an agent fills or abandons a declarative form.
+    
     window.addEventListener('toolactivated', e => log('agent', `[agent] filling form tool "${e.toolName ?? 'unknown'}"`));
     window.addEventListener('toolcancel', e => log('agent', `[agent] cancelled form tool "${e.toolName ?? 'unknown'}"`));
 
-    /* ---------------------------------------------------------------
-       2. IMPERATIVE registration via document.modelContext
-       --------------------------------------------------------------- */
+    
     const ok = data => ({ content: [{ type: 'text', text: JSON.stringify(data) }] });
     const fail = msg => ({ isError: true, content: [{ type: 'text', text: msg }] });
 
-    // Wrap every execute() so a thrown error becomes a structured tool
-    // error for the model rather than an unhandled rejection.
+    
     function guarded(name, fn) {
       return async (input = {}) => {
         log('agent', `[tool call] ${name}(${JSON.stringify(input)})`);
@@ -532,8 +505,7 @@
       TOOLS.map(({ name, description, inputSchema, annotations }) => ({ name, description, inputSchema, annotations })),
       null, 2);
 
-    // Feature detection. document.modelContext is current; navigator.modelContext
-    // shipped in early previews and is deprecated as of Chrome 150.
+   
     function resolveModelContext() {
       if (document.modelContext && typeof document.modelContext.registerTool === 'function') {
         return { ctx: document.modelContext, source: 'document.modelContext' };
@@ -595,8 +567,7 @@
         banner.textContent = `${TOOLS.length - registered} imperative tool(s) failed to register. See the activity log.`;
       }
 
-      // Remove tools when the page goes away. Fall back to unregisterTool()
-      // for builds without AbortSignal support.
+      
       window.addEventListener('pagehide', () => {
         registry.abort();
         if (typeof ctx.unregisterTool === 'function') {
@@ -605,9 +576,7 @@
       }, { once: true });
     }
 
-    /* ---------------------------------------------------------------
-       Local harness: runs the real execute() functions
-       --------------------------------------------------------------- */
+    
     document.querySelector('.harness').addEventListener('click', async e => {
       const demo = e.target.closest('[data-demo]')?.dataset.demo;
       if (demo === 'query') {
