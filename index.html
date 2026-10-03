@@ -695,19 +695,22 @@
     $('#place-btn').addEventListener('click', () => COMMAND_TOOLS.place_order());
 
     const itemForm = $('#item-form');
-    itemForm.addEventListener('submit', e => {
+    const LEGACY_SUBMIT = new URLSearchParams(location.search).has('legacy');
+    const resetItemForm = () => { itemForm.reset(); $('#f-item').value = 'latte'; };
+    itemForm.addEventListener('submit', async e => {
       e.preventDefault();
+      if (LEGACY_SUBMIT) {
+        const res = await COMMAND_TOOLS.add_to_order(Object.fromEntries(new FormData(itemForm)));
+        if (e.agentInvoked && typeof e.respondWith === 'function') e.respondWith(Promise.resolve(res));
+        if (!res.isError) resetItemForm();
+        return;
+      }
       const result = COMMAND_TOOLS.add_to_order(Object.fromEntries(new FormData(itemForm)));
       if (e.agentInvoked) {
         if (typeof e.respondWith === 'function') e.respondWith(result);
         return;
       }
-      result.then(res => {
-        if (!res.isError) {
-          itemForm.reset();
-          $('#f-item').value = 'latte';
-        }
-      });
+      result.then(res => { if (!res.isError) resetItemForm(); });
     });
     window.addEventListener('toolactivated', e => log('agent', `agent is filling the "${e.toolName ?? 'add_to_order'}" form`));
     window.addEventListener('toolcancel', e => log('agent', `agent cancelled the "${e.toolName ?? 'add_to_order'}" form`));
@@ -751,6 +754,7 @@
       status.dataset.state = 'ready';
       text.textContent = `Agent mode is on. ${n + 1} actions are available to AI agents in this browser.`;
       log('ok', `Registered ${n} tools with WebMCP, plus the add_to_order form.`);
+      if (LEGACY_SUBMIT) log('err', 'Experiment mode: using the original (pre-fix) form handler.');
       window.addEventListener('pagehide', () => {
         registry.abort();
         if (typeof ctx.unregisterTool === 'function') {
