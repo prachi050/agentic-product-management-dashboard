@@ -160,13 +160,16 @@
 
     .tracker { margin-top: 18px; padding: 14px 16px; border-radius: 14px; background: var(--surface-2); }
     .tracker[hidden] { display: none; }
+    .tracker .t-name { display: block; font: 600 22px/1.2 var(--display); }
+    .tracker .t-meta { color: var(--muted); font-size: 13px; margin-top: 2px; }
+    .tracker .t-items { list-style: none; padding: 10px 0; margin: 10px 0 0; border-top: 1px dashed var(--border); border-bottom: 1px dashed var(--border); display: grid; gap: 4px; font-size: 14px; }
     .tracker ol { list-style: none; padding: 0; margin: 10px 0 0; display: grid; gap: 8px; }
-    .tracker li { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 14px; }
-    .tracker li::before { content: ""; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--border); flex: none; }
-    .tracker li.done { color: var(--text); }
-    .tracker li.done::before { background: var(--ok); border-color: var(--ok); }
-    .tracker li.now { color: var(--text); font-weight: 500; }
-    .tracker li.now::before { border-color: var(--caramel); animation: pulse .9s infinite alternate; }
+    .tracker ol li { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 14px; }
+    .tracker ol li::before { content: ""; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--border); flex: none; }
+    .tracker ol li.done { color: var(--text); }
+    .tracker ol li.done::before { background: var(--ok); border-color: var(--ok); }
+    .tracker ol li.now { color: var(--text); font-weight: 500; }
+    .tracker ol li.now::before { border-color: var(--caramel); animation: pulse .9s infinite alternate; }
     @keyframes pulse { to { background: var(--caramel); } }
 
     .dev { margin-top: 36px; }
@@ -314,7 +317,9 @@
         </div>
         <button class="btn primary" id="place-btn" type="button">Place order</button>
         <div class="tracker" id="tracker" hidden>
-          <strong id="tracker-title"></strong>
+          <strong class="t-name" id="tracker-title"></strong>
+          <div class="t-meta" id="tracker-meta"></div>
+          <ul class="t-items" id="tracker-items"></ul>
           <ol>
             <li data-step="received">Order received</li>
             <li data-step="brewing">Being made</li>
@@ -518,11 +523,17 @@
       timers.splice(0).forEach(clearTimeout);
       const t = $('#tracker');
       t.hidden = false;
-      $('#tracker-title').textContent = `Pickup for ${placed.name} · Order #${placed.orderNumber} · ${placed.total}`;
+      $('#tracker-title').textContent = `Pickup for ${placed.name}`;
+      $('#tracker-meta').textContent = `Order #${placed.orderNumber} · ${placed.total}`;
+      $('#tracker-items').replaceChildren(...placed.items.map(i => {
+        const li = document.createElement('li');
+        li.textContent = `${i.quantity} × ${i.item}`;
+        return li;
+      }));
       const steps = ['received', 'brewing', 'ready'];
       const set = step => {
         const cur = steps.indexOf(step);
-        t.querySelectorAll('li').forEach(li => {
+        t.querySelectorAll('ol li').forEach(li => {
           const i = steps.indexOf(li.dataset.step);
           li.className = i < cur || (step === 'ready' && i === cur) ? 'done' : i === cur ? 'now' : '';
         });
