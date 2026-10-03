@@ -3,833 +3,729 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Agentic PM Dashboard</title>
-  <meta name="description" content="Proof of concept for the W3C WebMCP draft: declarative form tools and imperative document.modelContext.registerTool() tools in plain HTML and JavaScript.">
+  <title>Brew Bot</title>
+  <meta name="description" content="Order coffee by asking in plain English. An AI agent picks the drinks and places the order using WebMCP tools.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,650&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #0b0d12;
-      --surface: #12151c;
-      --surface-2: #181c25;
-      --border: #242a36;
-      --text: #e6e9ef;
-      --muted: #8a93a6;
-      --accent: #7c9cff;
-      --accent-ink: #0b0d12;
-      --ok: #4ade80;
-      --warn: #fbbf24;
-      --danger: #f87171;
-      --radius: 10px;
-      --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
-      --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-      color-scheme: dark;
+      --bg: #f8f3ec;
+      --surface: #ffffff;
+      --surface-2: #f3ebe1;
+      --border: #e7dccd;
+      --text: #2a1c13;
+      --muted: #8b7564;
+      --accent: #6f4a32;
+      --accent-ink: #fffaf4;
+      --accent-soft: #f1e3d3;
+      --caramel: #c9874f;
+      --ok: #3f8f5f;
+      --danger: #b5483c;
+      --shadow: 0 1px 2px rgba(70, 45, 25, .06), 0 10px 30px rgba(70, 45, 25, .07);
+      --radius: 18px;
+      --serif: "Fraunces", Georgia, "Times New Roman", serif;
+      --sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      color-scheme: light;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #17120e; --surface: #211a15; --surface-2: #2b221b; --border: #3b2f26;
+        --text: #f4ebe1; --muted: #ab9886; --accent: #e3b07c; --accent-ink: #1d140d; --accent-soft: #3a2b1f;
+        --caramel: #e3b07c; --ok: #7fd1a0; --danger: #f08a7e;
+        --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 10px 30px rgba(0, 0, 0, .25);
+        color-scheme: dark;
+      }
     }
     * { box-sizing: border-box; }
     html, body { margin: 0; }
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font: 14px/1.55 var(--sans);
-      -webkit-font-smoothing: antialiased;
-    }
-    a { color: var(--accent); }
-    code, kbd, .mono { font-family: var(--mono); font-size: 12.5px; }
+    body { background: var(--bg); color: var(--text); font: 15px/1.55 var(--sans); -webkit-font-smoothing: antialiased; }
+    button, input, select { font: inherit; color: inherit; }
+    code { font-family: var(--mono); font-size: 12.5px; }
 
-    .wrap { max-width: 1180px; margin: 0 auto; padding: 24px 16px 64px; }
+    .wrap { max-width: 1080px; margin: 0 auto; padding: 20px 16px 64px; }
 
-    header.top {
-      display: flex; flex-wrap: wrap; gap: 12px 24px;
-      align-items: center; justify-content: space-between;
-      padding-bottom: 20px; border-bottom: 1px solid var(--border);
-    }
-    .brand h1 { margin: 0; font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }
-    .brand p { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+    header.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .logo { display: flex; align-items: center; gap: 10px; font: 650 20px/1 var(--serif); }
+    .logo .cup { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); font-size: 18px; }
+    .link-btn { background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 7px 16px; color: var(--muted); cursor: pointer; font-size: 13px; font-weight: 500; }
+    .link-btn:hover, .link-btn[aria-expanded="true"] { color: var(--text); border-color: var(--accent); }
 
-    .status {
-      display: inline-flex; align-items: center; gap: 8px;
-      padding: 6px 12px; border: 1px solid var(--border); border-radius: 999px;
-      background: var(--surface); font-family: var(--mono); font-size: 12px;
-    }
-    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
-    .status[data-state="ready"] .dot { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
-    .status[data-state="legacy"] .dot { background: var(--warn); }
+    .hero { text-align: center; padding: 56px 0 8px; }
+    .eyebrow { display: inline-block; font-size: 12px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--caramel); }
+    .hero h1 { margin: 10px 0 0; font: 650 clamp(34px, 7vw, 56px)/1.05 var(--serif); letter-spacing: -0.02em; }
+    .hero p { margin: 12px auto 0; max-width: 460px; color: var(--muted); font-size: 16px; }
+
+    .ask { max-width: 640px; margin: 28px auto 0; }
+    .ask form { display: flex; gap: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 7px; box-shadow: var(--shadow); }
+    .ask form:focus-within { border-color: var(--accent); }
+    .ask input { flex: 1; min-width: 0; background: transparent; border: 0; padding: 10px 18px; font-size: 16px; outline: none; }
+    .ask input::placeholder { color: var(--muted); }
+    .ask input:focus { outline: none; }
+    .btn { cursor: pointer; border: 1px solid var(--border); background: var(--surface); border-radius: 999px; padding: 10px 22px; font-weight: 600; transition: transform .12s, background .12s; }
+    .btn:hover:not(:disabled) { transform: translateY(-1px); }
+    .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+    .btn:disabled { opacity: .45; cursor: not-allowed; }
+    .btn:focus-visible, .chip:focus-visible, .link-btn:focus-visible { outline: 2px solid var(--caramel); outline-offset: 2px; }
+    .chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 16px; }
+    .chip { cursor: pointer; background: var(--accent-soft); border: 1px solid transparent; border-radius: 999px; padding: 6px 14px; color: var(--accent); font-size: 13px; font-weight: 500; }
+    .chip:hover { border-color: var(--accent); }
+
+    .chat { max-width: 640px; margin: 20px auto 0; display: grid; gap: 10px; text-align: left; }
+    .chat:empty { display: none; }
+    .bubble { padding: 11px 16px; border-radius: 18px; white-space: pre-wrap; overflow-wrap: anywhere; max-width: 88%; animation: rise .25s ease-out; }
+    @keyframes rise { from { opacity: 0; transform: translateY(6px); } }
+    .bubble.you { justify-self: end; background: var(--accent); color: var(--accent-ink); border-bottom-right-radius: 6px; }
+    .bubble.bot { justify-self: start; background: var(--surface); border: 1px solid var(--border); border-bottom-left-radius: 6px; box-shadow: var(--shadow); }
+    .bubble.err { border-color: color-mix(in srgb, var(--danger) 45%, var(--border)); }
+    .bubble .via { display: block; margin-top: 6px; font-size: 11.5px; color: var(--muted); }
+
+    .steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin: 48px 0 40px; }
+    .step { display: flex; gap: 12px; align-items: flex-start; padding: 4px 0; }
+    .step .n { flex: none; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font-weight: 600; font-size: 14px; }
+    .step b { display: block; font-weight: 600; }
+    .step span { color: var(--muted); font-size: 14px; }
+
+    .grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 28px; align-items: start; }
+    h2 { font: 650 22px/1.2 var(--serif); margin: 0 0 16px; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); }
+
+    .menu { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+    .item { display: flex; flex-direction: column; gap: 4px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 16px; transition: transform .15s, box-shadow .15s; }
+    .item:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+    .item .icon { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 14px; font-size: 22px; margin-bottom: 8px; background: var(--tint, var(--accent-soft)); }
+    .item .name { font-weight: 600; }
+    .item .desc { color: var(--muted); font-size: 13px; flex: 1; }
+    .item .row { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
+    .item .price { font-weight: 600; font-variant-numeric: tabular-nums; }
+    .item .btn { padding: 6px 16px; font-size: 13px; background: var(--accent-soft); border-color: transparent; color: var(--accent); }
+    .item .btn:hover { background: var(--accent); color: var(--accent-ink); }
+
+    details.custom { margin-top: 16px; padding: 0; }
+    details.custom summary { cursor: pointer; font-weight: 600; padding: 16px 20px; list-style: none; display: flex; justify-content: space-between; }
+    details.custom summary::-webkit-details-marker { display: none; }
+    details.custom summary::after { content: "+"; color: var(--muted); font-size: 18px; line-height: 1; }
+    details.custom[open] summary::after { content: "–"; }
+    details.custom form { padding: 0 20px 20px; }
+    .form-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+    label { display: block; font-size: 12.5px; color: var(--muted); margin-bottom: 5px; }
+    select, input[type="number"] { width: 100%; padding: 9px 10px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; }
+    select:focus, input:focus { outline: 2px solid var(--caramel); outline-offset: 1px; }
+    .checks { display: flex; gap: 20px; align-items: center; margin-top: 14px; flex-wrap: wrap; }
+    .checks label { display: flex; align-items: center; gap: 7px; color: var(--text); margin: 0; font-size: 14px; }
+    .checks input { accent-color: var(--accent); width: 16px; height: 16px; }
+    .custom .btn.primary { margin-top: 16px; }
+    form:tool-form-active { outline: 2px dashed var(--caramel); outline-offset: 6px; border-radius: 8px; }
+
+    .order { position: sticky; top: 16px; }
+    .order h2 { margin-bottom: 4px; }
+    .order .sub { color: var(--muted); font-size: 13px; margin: 0 0 14px; }
+    .lines { list-style: none; margin: 0; padding: 14px 0 0; border-top: 1px dashed var(--border); display: grid; gap: 12px; }
+    .lines li { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; font-size: 14px; }
+    .lines .qty { color: var(--muted); font-variant-numeric: tabular-nums; }
+    .lines .x { cursor: pointer; background: none; border: 0; color: var(--muted); font-size: 18px; line-height: 1; padding: 2px 6px; border-radius: 6px; }
+    .lines .x:hover { color: var(--danger); background: var(--surface-2); }
+    .lines li.empty { display: block; color: var(--muted); text-align: center; padding: 18px 0 6px; }
+    .total { display: flex; justify-content: space-between; border-top: 1px dashed var(--border); margin-top: 16px; padding-top: 14px; font: 650 18px/1 var(--serif); font-variant-numeric: tabular-nums; }
+    .order .btn.primary { width: 100%; margin-top: 16px; padding: 12px; }
+    li.flash { animation: flash 1.2s ease-out; border-radius: 8px; }
+    @keyframes flash { from { background: var(--accent-soft); } to { background: transparent; } }
+
+    .tracker { margin-top: 18px; padding: 14px 16px; border-radius: 14px; background: var(--surface-2); }
+    .tracker[hidden] { display: none; }
+    .tracker ol { list-style: none; padding: 0; margin: 10px 0 0; display: grid; gap: 8px; }
+    .tracker li { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 14px; }
+    .tracker li::before { content: ""; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--border); flex: none; }
+    .tracker li.done { color: var(--text); }
+    .tracker li.done::before { background: var(--ok); border-color: var(--ok); }
+    .tracker li.now { color: var(--text); font-weight: 500; }
+    .tracker li.now::before { border-color: var(--caramel); animation: pulse .9s infinite alternate; }
+    @keyframes pulse { to { background: var(--caramel); } }
+
+    .dev { margin-top: 36px; }
+    .dev[hidden] { display: none; }
+    .dev p { color: var(--muted); font-size: 14px; margin: 0 0 16px; max-width: 760px; }
+    .dev-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; }
+    .status { display: inline-flex; align-items: flex-start; gap: 8px; font-size: 13.5px; }
+    .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); margin-top: 6px; flex: none; }
+    .status[data-state="ready"] .dot { background: var(--ok); }
     .status[data-state="missing"] .dot { background: var(--danger); }
+    .tools { list-style: none; padding: 0; margin: 14px 0 0; display: grid; gap: 8px; font-size: 13px; }
+    .tools code { color: var(--accent); font-weight: 600; }
+    .tools span { color: var(--muted); }
+    .log { margin: 0; height: 260px; overflow: auto; background: #1b140f; border-radius: 12px; padding: 12px 14px; font: 12px/1.6 var(--mono); color: #b9a593; }
+    .log .agent { color: #e3b07c; }
+    .log .ok { color: #7fd1a0; }
+    .log .err { color: #f08a7e; }
+    .log .info { color: #f4ebe1; }
+    .row-inline { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 14px; font-size: 13px; color: var(--muted); }
+    .row-inline select { width: auto; }
 
-    .banner {
-      margin: 20px 0 0; padding: 12px 14px;
-      border: 1px solid color-mix(in srgb, var(--warn) 40%, var(--border));
-      background: color-mix(in srgb, var(--warn) 8%, var(--surface));
-      border-radius: var(--radius); color: var(--text); font-size: 13px;
-    }
-    .banner[hidden] { display: none; }
+    footer { margin-top: 48px; color: var(--muted); font-size: 12.5px; text-align: center; }
+    footer a { color: var(--accent); }
 
-    .stats {
-      display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 12px; margin: 20px 0;
-    }
-    .stat {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: 14px 16px;
-    }
-    .stat .label { color: var(--muted); font-size: 12px; }
-    .stat .value { font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; }
-
-    .grid { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 16px; align-items: start; }
-
-    .card {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius); overflow: hidden;
-    }
-    .card > .hd {
-      display: flex; align-items: center; justify-content: space-between; gap: 8px;
-      padding: 12px 16px; border-bottom: 1px solid var(--border);
-    }
-    .card > .hd h2 { margin: 0; font-size: 13px; font-weight: 600; }
-    .card > .bd { padding: 16px; }
-    .tag {
-      font-family: var(--mono); font-size: 11px; color: var(--muted);
-      padding: 2px 8px; border: 1px solid var(--border); border-radius: 999px;
-    }
-    .tag.accent { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); }
-
-    label { display: block; font-size: 12px; color: var(--muted); margin: 0 0 6px; }
-    .field { margin-bottom: 14px; }
-    input, select, textarea {
-      width: 100%; padding: 9px 11px;
-      background: var(--surface-2); color: var(--text);
-      border: 1px solid var(--border); border-radius: 8px;
-      font: inherit;
-    }
-    input:focus, select:focus, textarea:focus, button:focus-visible {
-      outline: 2px solid var(--accent); outline-offset: 1px;
-    }
-    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-
-    button {
-      appearance: none; cursor: pointer;
-      padding: 9px 14px; border-radius: 8px; font: inherit; font-weight: 600;
-      border: 1px solid var(--border); background: var(--surface-2); color: var(--text);
-    }
-    button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); width: 100%; }
-    button.ghost { background: transparent; font-weight: 500; padding: 5px 10px; font-size: 12px; }
-    button:disabled { opacity: .5; cursor: not-allowed; }
-
-    
-    form:tool-form-active { outline: 2px dashed var(--accent); outline-offset: 6px; }
-    button:tool-submit-active { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 40%, transparent); }
-
-    .toolbar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
-    .toolbar input { flex: 1 1 200px; width: auto; }
-    .toolbar select { flex: 0 1 150px; width: auto; }
-
-    table { width: 100%; border-collapse: collapse; }
-    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
-    th { color: var(--muted); font-weight: 500; font-size: 12px; }
-    tbody tr:last-child td { border-bottom: 0; }
-    tbody tr.flash { animation: flash 1.2s ease-out; }
-    @keyframes flash { from { background: color-mix(in srgb, var(--accent) 22%, transparent); } to { background: transparent; } }
-    .table-scroll { overflow-x: auto; }
-    .empty { color: var(--muted); text-align: center; padding: 24px; }
-
-    .pill { font-family: var(--mono); font-size: 11px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); white-space: nowrap; }
-    .p-high { color: var(--danger); }
-    .p-medium { color: var(--warn); }
-    .p-low { color: var(--muted); }
-    .s-done { color: var(--ok); }
-    .s-in_progress { color: var(--accent); }
-    .s-todo { color: var(--muted); }
-    td.title.done { color: var(--muted); text-decoration: line-through; }
-
-    .log {
-      margin: 0; padding: 12px 16px; max-height: 260px; overflow: auto;
-      font-family: var(--mono); font-size: 12px; line-height: 1.6;
-      background: #07080c; color: var(--muted);
-    }
-    .log .t { color: #4b5263; }
-    .log .info { color: var(--text); }
-    .log .agent { color: var(--accent); }
-    .log .ok { color: var(--ok); }
-    .log .err { color: var(--danger); }
-
-    .stack { display: grid; gap: 16px; }
-    details.schema summary { cursor: pointer; color: var(--muted); font-size: 12px; }
-    details.schema pre { margin: 8px 0 0; padding: 10px; background: #07080c; border-radius: 8px; overflow: auto; font-size: 11.5px; }
-    .harness { display: flex; flex-wrap: wrap; gap: 8px; }
-
-    .command { margin-bottom: 16px; }
-    .command .hd { flex-wrap: wrap; }
-    .cmd-row { display: flex; gap: 8px; }
-    .cmd-row input { flex: 1 1 auto; min-width: 0; font-family: var(--mono); font-size: 13px; }
-    .cmd-row select { flex: 0 0 auto; width: auto; }
-    .cmd-row button.primary { width: auto; padding: 9px 18px; }
-    .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
-    .chip { font-family: var(--mono); font-size: 11.5px; font-weight: 400; padding: 4px 10px; border-radius: 999px; background: transparent; color: var(--muted); }
-    .chip:hover { color: var(--text); border-color: var(--accent); }
-    .transcript { margin-top: 12px; display: grid; gap: 8px; max-height: 320px; overflow: auto; }
-    .transcript:empty { display: none; }
-    .msg { padding: 8px 12px; border-radius: 8px; background: var(--surface-2); border: 1px solid var(--border); white-space: pre-wrap; overflow-wrap: anywhere; }
-    .msg.you { background: transparent; color: var(--muted); font-family: var(--mono); font-size: 12.5px; }
-    .msg.you::before { content: "› "; color: var(--accent); }
-    .msg.err { border-color: color-mix(in srgb, var(--danger) 50%, var(--border)); }
-    .msg .via { display: block; margin-top: 4px; font-family: var(--mono); font-size: 11px; color: var(--muted); }
-
-    footer { margin-top: 32px; color: var(--muted); font-size: 12px; }
-
-    @media (max-width: 900px) {
-      .grid { grid-template-columns: minmax(0, 1fr); }
-      .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    @media (max-width: 860px) {
+      .grid, .dev-grid { grid-template-columns: minmax(0, 1fr); }
+      .order { position: static; order: -1; }
+      .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
     @media (max-width: 560px) {
-      .cmd-row { flex-wrap: wrap; }
-      .cmd-row input { flex-basis: 100%; }
-      .cmd-row select, .cmd-row button.primary { flex: 1 1 0; }
+      .steps { grid-template-columns: minmax(0, 1fr); margin: 32px 0; }
+      .ask form { border-radius: 20px; flex-wrap: wrap; }
+      .ask input { flex-basis: 100%; }
+      .ask .btn { flex: 1; }
+      .hero { padding-top: 32px; }
+      .menu { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+      .item { padding: 14px; }
+      .item .desc { display: none; }
     }
+    @media (prefers-color-scheme: dark) { .item .icon { background: var(--accent-soft); } }
   </style>
 </head>
 <body>
   <div class="wrap">
     <header class="top">
-      <div class="brand">
-        <h1>Agentic Product Management Dashboard</h1>
-        <p>A product backlog that AI agents in the browser can read and update through WebMCP tools.</p>
-      </div>
-      <span class="status" id="mcp-status" data-state="pending" role="status">
-        <span class="dot" aria-hidden="true"></span><span id="mcp-status-text">detecting modelContext…</span>
-      </span>
+      <div class="logo"><span class="cup" aria-hidden="true">☕</span> Brew Bot</div>
+      <button class="link-btn" id="dev-toggle" type="button" aria-expanded="false" aria-controls="dev">How it works</button>
     </header>
 
-    <div class="banner" id="fallback-banner" hidden></div>
-
-    <section class="stats" aria-label="Task statistics">
-      <div class="stat"><div class="label">Total</div><div class="value" id="stat-total">0</div></div>
-      <div class="stat"><div class="label">To do</div><div class="value" id="stat-todo">0</div></div>
-      <div class="stat"><div class="label">In progress</div><div class="value" id="stat-progress">0</div></div>
-      <div class="stat"><div class="label">Done</div><div class="value" id="stat-done">0</div></div>
+    <section class="hero">
+      <span class="eyebrow">An agent-powered café</span>
+      <h1>What can I get you?</h1>
+      <p>Just ask in your own words. Our agent picks from the menu and puts in your order.</p>
+      <div class="ask">
+        <form id="ask-form" autocomplete="off">
+          <input id="ask" type="text" aria-label="Your coffee order" placeholder="A large oat latte with an extra shot">
+          <button class="btn primary" id="ask-btn" type="submit">Ask</button>
+        </form>
+        <div class="chips" id="examples">
+          <button class="chip" type="button">A large oat latte with an extra shot</button>
+          <button class="chip" type="button">Two small black coffees</button>
+          <button class="chip" type="button">What's on the menu?</button>
+          <button class="chip" type="button">Place my order</button>
+        </div>
+      </div>
+      <div class="chat" id="chat" aria-live="polite"></div>
     </section>
 
-    <section class="card command" aria-labelledby="cmd-h">
-      <div class="hd"><h2 id="cmd-h">Command</h2><span class="tag" id="engine-tag">rules</span></div>
-      <div class="bd">
-        <form id="cmd-form" class="cmd-row" autocomplete="off">
-          <input id="cmd" type="text" aria-label="Command"
-                 placeholder='Try "add Fix login bug high priority due friday #bug" or "help"'>
-          <select id="engine" aria-label="Command engine">
-            <option value="auto">Auto</option>
-            <option value="rules">Rules only</option>
-            <option value="ai">AI only</option>
-          </select>
-          <button class="primary" type="submit" id="cmd-run">Run</button>
-        </form>
-        <div class="chips" id="cmd-examples">
-          <button type="button" class="chip" data-cmd="add Fix login bug high priority due friday #bug">add Fix login bug high priority due friday #bug</button>
-          <button type="button" class="chip" data-cmd="show open high">show open high</button>
-          <button type="button" class="chip" data-cmd="start the pricing test">start the pricing test</button>
-          <button type="button" class="chip" data-cmd="complete checkout">complete checkout</button>
-          <button type="button" class="chip" data-cmd="what's overdue?">what's overdue?</button>
-          <button type="button" class="chip" data-cmd="help">help</button>
-        </div>
-        <div class="transcript" id="transcript" aria-live="polite"></div>
-      </div>
+    <section class="steps" aria-label="How ordering works">
+      <div class="step"><span class="n">1</span><div><b>You ask</b><span>"Get me a large oat latte"</span></div></div>
+      <div class="step"><span class="n">2</span><div><b>The agent orders</b><span>It picks the drink, size and milk for you</span></div></div>
+      <div class="step"><span class="n">3</span><div><b>We brew it</b><span>Watch your order go from received to ready</span></div></div>
     </section>
 
     <div class="grid">
-      <div class="stack">
-       
-        <section class="card" aria-labelledby="create-h">
-          <div class="hd"><h2 id="create-h">New backlog item</h2><span class="tag accent">declarative</span></div>
-          <div class="bd">
-            <form id="create-task-form"
-                  toolname="create_task"
-                  tooldescription="Create a new item in the product backlog. Returns the created task as JSON."
-                  toolautosubmit>
-              <div class="field">
-                <label for="f-title">Title</label>
-                <input id="f-title" name="title" type="text" required maxlength="120"
-                       placeholder="Ship onboarding checklist"
-                       toolparamdescription="Short, imperative task title (max 120 characters).">
-              </div>
-              <div class="row">
-                <div class="field">
-                  <label for="f-priority">Priority</label>
-                  <select id="f-priority" name="priority" required
-                          toolparamdescription="Task urgency.">
-                    <option value="low">Low</option>
-                    <option value="medium" selected>Medium</option>
-                    <option value="high">High</option>
-                  </select>
-                </div>
-                <div class="field">
-                  <label for="f-due">Due date</label>
-                  <input id="f-due" name="due" type="date"
-                         toolparamdescription="Optional due date in YYYY-MM-DD format.">
-                </div>
-              </div>
-              <div class="field">
-                <label for="f-tags">Tags</label>
-                <input id="f-tags" name="tags" type="text" placeholder="research, writing"
-                       toolparamdescription="Optional comma-separated tags.">
-              </div>
-              <button class="primary" type="submit">Add to backlog</button>
-            </form>
-          </div>
-        </section>
+      <section aria-labelledby="menu-h">
+        <h2 id="menu-h">Menu</h2>
+        <div class="menu" id="menu"></div>
 
-        <section class="card" aria-labelledby="tools-h">
-          <div class="hd"><h2 id="tools-h">Imperative tools</h2><span class="tag accent">registerTool()</span></div>
-          <div class="bd">
-            <p style="margin:0 0 12px;color:var(--muted);font-size:13px">
-              Registered from JavaScript. The buttons call the same <code>execute()</code>
-              functions an agent would, so you can try them in any browser.
-            </p>
-            <div class="harness">
-              <button class="ghost" type="button" data-demo="query">query_tasks: open, high first</button>
-              <button class="ghost" type="button" data-demo="advance">update_task_status: next to done</button>
+        <details class="custom card">
+          <summary>Customize a drink</summary>
+          <form id="drink-form"
+                toolname="add_to_order"
+                tooldescription="Add a drink to the customer's coffee order. Returns the added line and the new order total."
+                toolautosubmit>
+            <div class="form-grid">
+              <div>
+                <label for="f-drink">Drink</label>
+                <select id="f-drink" name="drink" required toolparamdescription="Menu drink id."></select>
+              </div>
+              <div>
+                <label for="f-size">Size</label>
+                <select id="f-size" name="size" toolparamdescription="Cup size. Medium if not specified.">
+                  <option value="small">Small</option>
+                  <option value="medium" selected>Medium (+$0.50)</option>
+                  <option value="large">Large (+$1.00)</option>
+                </select>
+              </div>
+              <div>
+                <label for="f-milk">Milk</label>
+                <select id="f-milk" name="milk" toolparamdescription="Milk choice. Leave empty for the drink's usual milk.">
+                  <option value="">Usual</option>
+                  <option value="whole">Whole</option>
+                  <option value="skim">Skim</option>
+                  <option value="oat">Oat (+$0.75)</option>
+                  <option value="almond">Almond (+$0.75)</option>
+                  <option value="none">No milk</option>
+                </select>
+              </div>
+              <div>
+                <label for="f-qty">Quantity</label>
+                <input id="f-qty" name="quantity" type="number" min="1" max="10" value="1" toolparamdescription="How many of this drink, 1 to 10.">
+              </div>
             </div>
-            <details class="schema" style="margin-top:12px">
-              <summary>View registered tool schemas</summary>
-              <pre id="schema-dump"></pre>
-            </details>
-          </div>
-        </section>
-      </div>
+            <div class="checks">
+              <label><input type="checkbox" name="extraShot" value="true" toolparamdescription="Add an extra espresso shot (+$1.00)."> Extra shot (+$1.00)</label>
+              <label><input type="checkbox" name="iced" value="true" toolparamdescription="Serve over ice."> Iced</label>
+            </div>
+            <button class="btn primary" type="submit">Add to order</button>
+          </form>
+        </details>
+      </section>
 
-      <div class="stack">
-        <section class="card" aria-labelledby="list-h">
-          <div class="hd"><h2 id="list-h">Backlog</h2><span class="tag" id="list-count">0 shown</span></div>
-          <div class="bd">
-            <div class="toolbar">
-              <input id="q" type="search" placeholder="Filter by title or tag" aria-label="Filter tasks">
-              <select id="status-filter" aria-label="Status filter">
-                <option value="all">All statuses</option>
-                <option value="todo">To do</option>
-                <option value="in_progress">In progress</option>
-                <option value="done">Done</option>
-              </select>
-            </div>
-            <div class="table-scroll">
-              <table>
-                <thead><tr><th>Task</th><th>Priority</th><th>Status</th><th>Due</th><th></th></tr></thead>
-                <tbody id="task-body"></tbody>
-              </table>
-            </div>
-          </div>
-        </section>
-
-        <section class="card" aria-labelledby="log-h">
-          <div class="hd">
-            <h2 id="log-h">Agent activity</h2>
-            <button class="ghost" type="button" id="clear-log">Clear</button>
-          </div>
-          <pre class="log" id="log" aria-live="polite"></pre>
-        </section>
-      </div>
+      <aside class="order card" aria-labelledby="order-h">
+        <h2 id="order-h">Your order</h2>
+        <p class="sub">Pickup at the counter</p>
+        <ul class="lines" id="lines"></ul>
+        <div class="total"><span>Total</span><span id="total">$0.00</span></div>
+        <button class="btn primary" id="place-btn" type="button">Place order</button>
+        <div class="tracker" id="tracker" hidden>
+          <strong id="tracker-title"></strong>
+          <ol>
+            <li data-step="received">Order received</li>
+            <li data-step="brewing">Brewing</li>
+            <li data-step="ready">Ready for pickup</li>
+          </ol>
+        </div>
+      </aside>
     </div>
 
-    <footer>
-      Built on the WebMCP draft from the W3C Web Machine Learning Community Group.
-      The page works without WebMCP; agent tools are a progressive enhancement.
-    </footer>
+    <section class="dev card" id="dev" hidden aria-labelledby="dev-h">
+      <h2 id="dev-h">How it works</h2>
+      <p>
+        This page uses <strong>WebMCP</strong>, a draft web standard that lets a website hand an AI agent a list of
+        actions it can take, so the agent doesn't have to guess what to click. The chat box above uses the same actions.
+        Simple requests are understood by rules; free-form ones go to Chrome's built-in AI, which runs on your device.
+        Nothing is stored on a server.
+      </p>
+      <div class="dev-grid">
+        <div>
+          <span class="status" id="mcp-status" data-state="pending"><span class="dot" aria-hidden="true"></span><span id="mcp-status-text">Checking for agent support…</span></span>
+          <ul class="tools" id="tool-list"></ul>
+          <div class="row-inline">
+            <label for="engine" style="margin:0">Chat engine</label>
+            <select id="engine">
+              <option value="auto">Auto</option>
+              <option value="rules">Rules only</option>
+              <option value="ai">On-device AI only</option>
+            </select>
+            <span id="engine-note"></span>
+          </div>
+        </div>
+        <div>
+          <pre class="log" id="log" aria-label="Agent activity log"></pre>
+        </div>
+      </div>
+    </section>
+
+    <footer>A WebMCP proof of concept. Orders are pretend and live only in this tab. · <a href="dashboard.html">See the developer dashboard demo</a></footer>
   </div>
 
   <script>
   (() => {
     'use strict';
 
-    
-    const STATUSES = ['todo', 'in_progress', 'done'];
-    const PRIORITY_RANK = { high: 0, medium: 1, low: 2 };
-
-    let nextId = 1;
-    const tasks = [
-      seed('Ship self-serve onboarding flow', 'high', 'in_progress', 7, ['growth', 'onboarding']),
-      seed('Fix checkout drop-off on mobile', 'high', 'todo', 14, ['bug', 'payments']),
-      seed('Run pricing page A/B test', 'medium', 'todo', 10, ['experiment']),
-      seed('Write PRD for team workspaces', 'medium', 'done', -2, ['spec']),
-      seed('Synthesize Q3 customer interviews', 'low', 'done', -5, ['research'])
+    const MENU = [
+      { id: 'espresso',     name: 'Espresso',     cents: 300, milk: false, desc: 'A rich double shot', icon: '☕', tint: '#efe2d3' },
+      { id: 'americano',    name: 'Americano',    cents: 350, milk: false, desc: 'Espresso and hot water. Our black coffee.', icon: '☕', tint: '#eadfd2' },
+      { id: 'latte',        name: 'Latte',        cents: 475, milk: true,  desc: 'Espresso with silky steamed milk', icon: '🥛', tint: '#f3e7da' },
+      { id: 'cappuccino',   name: 'Cappuccino',   cents: 450, milk: true,  desc: 'Espresso, milk and thick foam', icon: '☕', tint: '#f0e1cf' },
+      { id: 'flat_white',   name: 'Flat white',   cents: 450, milk: true,  desc: 'Strong and smooth, less foam', icon: '🤍', tint: '#efe8df' },
+      { id: 'mocha',        name: 'Mocha',        cents: 525, milk: true,  desc: 'A latte with dark chocolate', icon: '🍫', tint: '#ecdcd0' },
+      { id: 'cold_brew',    name: 'Cold brew',    cents: 425, milk: false, desc: 'Steeped 18 hours, always iced', icedOnly: true , icon: '🧊', tint: '#dfe9ee' },
+      { id: 'matcha_latte', name: 'Matcha latte', cents: 500, milk: true,  desc: 'Green tea whisked with milk', icon: '🍵', tint: '#e3edda' },
+      { id: 'chai_latte',   name: 'Chai latte',   cents: 475, milk: true,  desc: 'Spiced black tea and milk', icon: '🫖', tint: '#f2e2cf' }
     ];
+    const SIZES = { small: 0, medium: 50, large: 100 };
+    const MILKS = { whole: 0, skim: 0, oat: 75, almond: 75, none: 0 };
+    const EXTRA_SHOT = 100;
+    const byId = Object.fromEntries(MENU.map(d => [d.id, d]));
 
-    function seed(title, priority, status, dueInDays, tags) {
-      const d = new Date();
-      d.setDate(d.getDate() + dueInDays);
-      return { id: nextId++, title, priority, status, due: d.toISOString().slice(0, 10), tags, createdAt: Date.now() };
+    const order = [];
+    let nextLine = 1;
+    let nextOrderNo = 101;
+    const timers = [];
+
+    class ToolError extends Error { constructor(m) { super(m); this.name = 'ToolError'; } }
+    const $ = s => document.querySelector(s);
+    const money = c => `$${(c / 100).toFixed(2)}`;
+    const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+    const orderTotal = () => order.reduce((n, l) => n + l.unitCents * l.quantity, 0);
+
+    function findDrink(value) {
+      const v = String(value ?? '').trim().toLowerCase().replace(/[\s-]+/g, '_');
+      return byId[v] ?? MENU.find(d => d.name.toLowerCase().replace(/\s+/g, '_') === v);
     }
 
-   
-    function createTask({ title, priority = 'medium', due = '', tags = '' }) {
-      title = String(title ?? '').trim();
-      if (!title) throw new ToolError('title is required.');
-      if (title.length > 120) throw new ToolError('title must be 120 characters or fewer.');
-      if (!(priority in PRIORITY_RANK)) throw new ToolError(`priority must be one of: ${Object.keys(PRIORITY_RANK).join(', ')}.`);
-      if (due && !/^\d{4}-\d{2}-\d{2}$/.test(due)) throw new ToolError('due must use YYYY-MM-DD.');
-
-      const tagList = (Array.isArray(tags) ? tags : String(tags).split(','))
-        .map(t => t.trim().toLowerCase()).filter(Boolean);
-      const task = { id: nextId++, title, priority, status: 'todo', due: due || null, tags: tagList, createdAt: Date.now() };
-      tasks.push(task);
-      render(task.id);
-      return task;
+    function lineLabel(l) {
+      const d = byId[l.drink];
+      const milk = l.milk === 'oat' || l.milk === 'almond' || l.milk === 'skim' ? `${l.milk} ` : '';
+      const iced = l.iced && !d.icedOnly ? 'iced ' : '';
+      const extras = [l.extraShot && 'extra shot', d.milk && l.milk === 'none' && 'no milk'].filter(Boolean);
+      return cap(`${l.size} ${iced}${milk}${d.name.toLowerCase()}`) + (extras.length ? `, ${extras.join(', ')}` : '');
     }
 
-    function queryTasks({ status = [], priority = [], text = '', dueBefore, sortBy = 'priority', limit = 20 } = {}) {
-      const needle = String(text).trim().toLowerCase();
-      let rows = tasks.filter(t =>
-        (!status.length || status.includes(t.status)) &&
-        (!priority.length || priority.includes(t.priority)) &&
-        (!needle || t.title.toLowerCase().includes(needle) || t.tags.some(tag => tag.includes(needle))) &&
-        (!dueBefore || (t.due && t.due <= dueBefore))
-      );
+    function publicLine(l) {
+      return { line: l.line, item: lineLabel(l), quantity: l.quantity, price: money(l.unitCents * l.quantity) };
+    }
 
-      const sorters = {
-        priority: (a, b) => PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority] || cmpDue(a, b),
-        due: cmpDue,
-        created: (a, b) => b.createdAt - a.createdAt
-      };
-      rows.sort(sorters[sortBy] ?? sorters.priority);
-
-      const today = new Date().toISOString().slice(0, 10);
+    function getMenu() {
       return {
-        matched: rows.length,
-        overdue: rows.filter(t => t.status !== 'done' && t.due && t.due < today).length,
-        byStatus: Object.fromEntries(STATUSES.map(s => [s, rows.filter(t => t.status === s).length])),
-        tasks: rows.slice(0, Math.max(1, Math.min(100, limit))).map(publicTask)
+        drinks: MENU.map(d => ({ id: d.id, name: d.name, price: money(d.cents), description: d.desc, ...(d.icedOnly && { icedOnly: true }) })),
+        sizes: { small: '+$0.00', medium: '+$0.50', large: '+$1.00' },
+        milks: { whole: '+$0.00', skim: '+$0.00', oat: '+$0.75', almond: '+$0.75', none: '+$0.00' },
+        extraShot: money(EXTRA_SHOT)
       };
     }
 
-    function updateTaskStatus({ id, status }) {
-      const task = tasks.find(t => t.id === Number(id));
-      if (!task) throw new ToolError(`No task with id ${id}.`);
-      if (!STATUSES.includes(status)) throw new ToolError(`status must be one of: ${STATUSES.join(', ')}.`);
-      const previous = task.status;
-      task.status = status;
-      render(task.id);
-      return { id: task.id, previous, status };
+    function addToOrder({ drink, size = 'medium', milk, extraShot = false, iced = false, quantity = 1 } = {}) {
+      const d = findDrink(drink);
+      if (!d) throw new ToolError(`"${drink}" isn't on the menu. Try one of: ${MENU.map(m => m.id).join(', ')}.`);
+      size = String(size || 'medium').toLowerCase();
+      if (!(size in SIZES)) throw new ToolError('size must be small, medium or large.');
+      milk = milk ? String(milk).toLowerCase() : (d.milk ? 'whole' : 'none');
+      if (!(milk in MILKS)) throw new ToolError('milk must be whole, skim, oat, almond or none.');
+      quantity = Number(quantity) || 1;
+      if (!Number.isInteger(quantity) || quantity < 1 || quantity > 10) throw new ToolError('quantity must be a whole number from 1 to 10.');
+      const toBool = v => v === true || v === 'true' || v === 'on';
+      const line = {
+        line: nextLine++, drink: d.id, size, milk, quantity,
+        extraShot: toBool(extraShot), iced: d.icedOnly || toBool(iced)
+      };
+      line.unitCents = d.cents + SIZES[size] + MILKS[milk] + (line.extraShot ? EXTRA_SHOT : 0);
+      order.push(line);
+      render(line.line);
+      return { added: publicLine(line), orderTotal: money(orderTotal()) };
     }
 
-    function deleteTask({ id }) {
-      const i = tasks.findIndex(t => t.id === Number(id));
-      if (i < 0) throw new ToolError(`No task with id ${id}.`);
-      const [removed] = tasks.splice(i, 1);
+    function viewOrder() {
+      return { items: order.map(publicLine), total: money(orderTotal()) };
+    }
+
+    function removeFromOrder({ line }) {
+      const i = order.findIndex(l => l.line === Number(line));
+      if (i < 0) throw new ToolError(`There's no line ${line} in the order.`);
+      const [removed] = order.splice(i, 1);
       render();
-      return { deleted: publicTask(removed) };
+      return { removed: lineLabel(removed), orderTotal: money(orderTotal()) };
     }
 
-    function cmpDue(a, b) { return (a.due ?? '9999') .localeCompare(b.due ?? '9999'); }
-    function publicTask({ id, title, priority, status, due, tags }) { return { id, title, priority, status, due, tags }; }
+    function clearOrder() {
+      const count = order.length;
+      order.length = 0;
+      render();
+      return { cleared: count };
+    }
 
-    class ToolError extends Error { constructor(msg) { super(msg); this.name = 'ToolError'; } }
+    function placeOrder() {
+      if (!order.length) throw new ToolError('The order is empty. Add a drink first.');
+      const placed = { orderNumber: nextOrderNo++, items: order.map(publicLine), total: money(orderTotal()), readyInMinutes: 3 };
+      order.length = 0;
+      render();
+      track(placed);
+      return placed;
+    }
 
-    
-    const $ = sel => document.querySelector(sel);
-    const body = $('#task-body');
-
-    function render(flashId) {
-      const q = $('#q').value.trim().toLowerCase();
-      const sf = $('#status-filter').value;
-      const view = queryTasks({ status: sf === 'all' ? [] : [sf], text: q, limit: 100 }).tasks;
-
-      body.replaceChildren(...view.map(t => {
-        const tr = document.createElement('tr');
-        if (t.id === flashId) tr.className = 'flash';
-        tr.innerHTML = `
-          <td class="title ${t.status === 'done' ? 'done' : ''}"></td>
-          <td><span class="pill p-${t.priority}">${t.priority}</span></td>
-          <td><span class="pill s-${t.status}">${t.status.replace('_', ' ')}</span></td>
-          <td class="mono">${t.due ?? '—'}</td>
-          <td><button class="ghost" type="button" data-advance="${t.id}" ${t.status === 'done' ? 'disabled' : ''}>Advance</button></td>`;
-        tr.querySelector('.title').textContent = t.title;   // user/agent text: never via innerHTML
-        return tr;
+    function render(flashLine) {
+      const ul = $('#lines');
+      ul.replaceChildren(...order.map(l => {
+        const li = document.createElement('li');
+        if (l.line === flashLine) li.className = 'flash';
+        const name = document.createElement('span');
+        name.innerHTML = `<span class="qty">${l.quantity} ×</span> `;
+        name.append(lineLabel(l));
+        const price = document.createElement('span');
+        price.textContent = money(l.unitCents * l.quantity);
+        const x = document.createElement('button');
+        x.className = 'x';
+        x.type = 'button';
+        x.textContent = '×';
+        x.setAttribute('aria-label', `Remove ${lineLabel(l)}`);
+        x.addEventListener('click', () => COMMAND_TOOLS.remove_from_order({ line: l.line }));
+        li.append(name, price, x);
+        return li;
       }));
-      if (!view.length) body.innerHTML = '<tr><td class="empty" colspan="5">No tasks match.</td></tr>';
-
-      $('#list-count').textContent = `${view.length} shown`;
-      $('#stat-total').textContent = tasks.length;
-      $('#stat-todo').textContent = tasks.filter(t => t.status === 'todo').length;
-      $('#stat-progress').textContent = tasks.filter(t => t.status === 'in_progress').length;
-      $('#stat-done').textContent = tasks.filter(t => t.status === 'done').length;
+      if (!order.length) ul.innerHTML = '<li class="empty">Nothing yet. Ask for a drink or tap Add.</li>';
+      $('#total').textContent = money(orderTotal());
+      $('#place-btn').disabled = !order.length;
     }
+
+    function track(placed) {
+      timers.splice(0).forEach(clearTimeout);
+      const t = $('#tracker');
+      t.hidden = false;
+      $('#tracker-title').textContent = `Order #${placed.orderNumber} · ${placed.total}`;
+      const set = step => {
+        const order = ['received', 'brewing', 'ready'];
+        t.querySelectorAll('li').forEach(li => {
+          const i = order.indexOf(li.dataset.step), cur = order.indexOf(step);
+          li.className = i < cur || step === 'ready' && i === cur ? 'done' : i === cur ? 'now' : '';
+        });
+      };
+      set('received');
+      timers.push(setTimeout(() => set('brewing'), 2500));
+      timers.push(setTimeout(() => { set('ready'); log('ok', `Order #${placed.orderNumber} is ready for pickup.`); }, 8000));
+    }
+
+    $('#menu').replaceChildren(...MENU.map(d => {
+      const el = document.createElement('div');
+      el.className = 'item';
+      el.style.setProperty('--tint', d.tint);
+      el.innerHTML = `<div class="icon" aria-hidden="true">${d.icon}</div><div class="name"></div><div class="desc"></div>
+        <div class="row"><span class="price">${money(d.cents)}</span><button class="btn" type="button">Add</button></div>`;
+      el.querySelector('.name').textContent = d.name;
+      el.querySelector('.desc').textContent = d.desc;
+      el.querySelector('button').setAttribute('aria-label', `Add a medium ${d.name}`);
+      el.querySelector('button').addEventListener('click', () => COMMAND_TOOLS.add_to_order({ drink: d.id }));
+      return el;
+    }));
+    $('#f-drink').replaceChildren(...MENU.map(d => new Option(`${d.name} · ${money(d.cents)}`, d.id)));
+    $('#f-drink').value = 'latte';
 
     const logEl = $('#log');
     function log(kind, msg) {
       const line = document.createElement('div');
-      const t = document.createElement('span');
-      t.className = 't';
-      t.textContent = new Date().toLocaleTimeString([], { hour12: false }) + '  ';
-      const m = document.createElement('span');
-      m.className = kind;
-      m.textContent = msg;
-      line.append(t, m);
+      line.className = kind;
+      line.textContent = `${new Date().toLocaleTimeString([], { hour12: false })}  ${msg}`;
       logEl.append(line);
       logEl.scrollTop = logEl.scrollHeight;
     }
 
-    $('#q').addEventListener('input', () => render());
-    $('#status-filter').addEventListener('change', () => render());
-    $('#clear-log').addEventListener('click', () => logEl.replaceChildren());
-    body.addEventListener('click', e => {
-      const id = e.target.closest('[data-advance]')?.dataset.advance;
-      if (!id) return;
-      const task = tasks.find(t => t.id === Number(id));
-      updateTaskStatus({ id, status: STATUSES[Math.min(STATUSES.indexOf(task.status) + 1, 2)] });
-    });
-
-   
-    const form = $('#create-task-form');
-    form.addEventListener('submit', e => {
-      e.preventDefault();
-      const byAgent = e.agentInvoked === true;
-      const data = Object.fromEntries(new FormData(form));
-
-      let result;
-      try {
-        const task = createTask(data);
-        result = { ok: true, task: publicTask(task) };
-        log(byAgent ? 'agent' : 'info', `${byAgent ? '[agent] ' : ''}create_task -> #${task.id} "${task.title}"`);
-        form.reset();
-      } catch (err) {
-        result = { ok: false, error: err.message };
-        log('err', `create_task failed: ${err.message}`);
-      }
-
-      if (byAgent && typeof e.respondWith === 'function') {
-        e.respondWith(Promise.resolve(result));
-      }
-    });
-
-    
-    window.addEventListener('toolactivated', e => log('agent', `[agent] filling form tool "${e.toolName ?? 'unknown'}"`));
-    window.addEventListener('toolcancel', e => log('agent', `[agent] cancelled form tool "${e.toolName ?? 'unknown'}"`));
-
-    
     const ok = data => ({ content: [{ type: 'text', text: JSON.stringify(data) }] });
     const fail = msg => ({ isError: true, content: [{ type: 'text', text: msg }] });
-
-    
     function guarded(name, fn) {
-      return async (input = {}) => {
-        log('agent', `[tool call] ${name}(${JSON.stringify(input)})`);
+      return async (input = {}, client) => {
+        log('agent', `→ ${name}(${JSON.stringify(input)})`);
         try {
-          const out = await fn(input);
-          log('ok', `${name} ✓`);
+          const out = await fn(input, client);
+          log('ok', `✓ ${name}`);
           return ok(out);
         } catch (err) {
           const msg = err instanceof ToolError ? err.message : `Internal error in ${name}.`;
           if (!(err instanceof ToolError)) console.error(err);
-          log('err', `${name} ✗ ${msg}`);
+          log('err', `✗ ${name}: ${msg}`);
           return fail(msg);
         }
       };
     }
 
+    async function confirmPlace(client) {
+      const ask = () => confirm(`An agent wants to place your order for ${money(orderTotal())}. Place it?`);
+      const yes = client && typeof client.requestUserInteraction === 'function'
+        ? await client.requestUserInteraction(async () => ask())
+        : ask();
+      if (!yes) throw new ToolError('The customer declined to place the order.');
+    }
+
     const TOOLS = [
       {
-        name: 'query_tasks',
-        description:
-          'Search, filter and sort the product backlog. Returns aggregate counts (matched, overdue, byStatus) ' +
-          'and the matching tasks. Use this before update_task_status to find task ids.',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            status:    { type: 'array', items: { type: 'string', enum: STATUSES }, description: 'Only these statuses. Empty means all.' },
-            priority:  { type: 'array', items: { type: 'string', enum: ['low', 'medium', 'high'] }, description: 'Only these priorities. Empty means all.' },
-            text:      { type: 'string', description: 'Case-insensitive match on title or tag.' },
-            dueBefore: { type: 'string', format: 'date', description: 'Only tasks due on or before this date (YYYY-MM-DD).' },
-            sortBy:    { type: 'string', enum: ['priority', 'due', 'created'], default: 'priority' },
-            limit:     { type: 'integer', minimum: 1, maximum: 100, default: 20 }
-          },
-          additionalProperties: false
-        },
+        name: 'get_menu',
+        description: 'List the drinks, sizes, milk options and prices.',
+        inputSchema: { type: 'object', properties: {}, additionalProperties: false },
         annotations: { readOnlyHint: true },
-        execute: guarded('query_tasks', queryTasks)
+        execute: guarded('get_menu', getMenu)
       },
       {
-        name: 'update_task_status',
-        description: 'Move one backlog item to a new status. Get the id from query_tasks first.',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            id:     { type: 'integer', description: 'Task id.' },
-            status: { type: 'string', enum: STATUSES }
-          },
-          required: ['id', 'status'],
-          additionalProperties: false
-        },
-        execute: guarded('update_task_status', updateTaskStatus)
+        name: 'view_order',
+        description: "Show what's in the customer's order so far and the total.",
+        inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+        annotations: { readOnlyHint: true },
+        execute: guarded('view_order', viewOrder)
       },
       {
-        name: 'delete_task',
-        description: 'Permanently remove one backlog item. Get the id from query_tasks first.',
+        name: 'remove_from_order',
+        description: 'Remove one line from the order. Get the line number from view_order.',
         inputSchema: {
           type: 'object',
-          properties: { id: { type: 'integer', description: 'Task id.' } },
-          required: ['id'],
+          properties: { line: { type: 'integer', description: 'Line number from view_order.' } },
+          required: ['line'],
           additionalProperties: false
         },
+        execute: guarded('remove_from_order', removeFromOrder)
+      },
+      {
+        name: 'clear_order',
+        description: 'Remove everything from the order.',
+        inputSchema: { type: 'object', properties: {}, additionalProperties: false },
         annotations: { destructiveHint: true },
-        execute: guarded('delete_task', deleteTask)
+        execute: guarded('clear_order', clearOrder)
+      },
+      {
+        name: 'place_order',
+        description: 'Submit the order for the customer. The customer is asked to confirm before it is placed.',
+        inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+        execute: guarded('place_order', async (_, client) => { await confirmPlace(client); return placeOrder(); })
       }
     ];
 
-    $('#schema-dump').textContent = JSON.stringify(
-      TOOLS.map(({ name, description, inputSchema, annotations }) => ({ name, description, inputSchema, annotations })),
-      null, 2);
+    const COMMAND_TOOLS = {
+      add_to_order: guarded('add_to_order', addToOrder),
+      get_menu: TOOLS[0].execute,
+      view_order: TOOLS[1].execute,
+      remove_from_order: TOOLS[2].execute,
+      clear_order: TOOLS[3].execute,
+      place_order: guarded('place_order', placeOrder)
+    };
 
-   
+    $('#place-btn').addEventListener('click', () => COMMAND_TOOLS.place_order());
+
+    const drinkForm = $('#drink-form');
+    drinkForm.addEventListener('submit', async e => {
+      e.preventDefault();
+      const fd = Object.fromEntries(new FormData(drinkForm));
+      const res = await COMMAND_TOOLS.add_to_order(fd);
+      if (e.agentInvoked && typeof e.respondWith === 'function') e.respondWith(Promise.resolve(res));
+      if (!res.isError) {
+        drinkForm.reset();
+        $('#f-drink').value = 'latte';
+      }
+    });
+    window.addEventListener('toolactivated', e => log('agent', `agent is filling the "${e.toolName ?? 'add_to_order'}" form`));
+    window.addEventListener('toolcancel', e => log('agent', `agent cancelled the "${e.toolName ?? 'add_to_order'}" form`));
+
+    $('#tool-list').replaceChildren(...[
+      { name: 'add_to_order', description: 'Add a drink (from the "Customize a drink" form)' },
+      ...TOOLS
+    ].map(t => {
+      const li = document.createElement('li');
+      li.innerHTML = '<code></code> <span></span>';
+      li.querySelector('code').textContent = t.name;
+      li.querySelector('span').textContent = `· ${t.description}`;
+      return li;
+    }));
+
     function resolveModelContext() {
-      if (document.modelContext && typeof document.modelContext.registerTool === 'function') {
-        return { ctx: document.modelContext, source: 'document.modelContext' };
-      }
-      if (navigator.modelContext && typeof navigator.modelContext.registerTool === 'function') {
-        return { ctx: navigator.modelContext, source: 'navigator.modelContext (deprecated)' };
-      }
-      return { ctx: null, source: null };
+      if (document.modelContext && typeof document.modelContext.registerTool === 'function') return document.modelContext;
+      if (navigator.modelContext && typeof navigator.modelContext.registerTool === 'function') return navigator.modelContext;
+      return null;
     }
 
     const registry = new AbortController();
-
-    function registerImperativeTools() {
-      const statusEl = $('#mcp-status');
-      const statusText = $('#mcp-status-text');
-      const banner = $('#fallback-banner');
-
-      if (!window.isSecureContext) {
-        statusEl.dataset.state = 'missing';
-        statusText.textContent = 'insecure context';
-        banner.hidden = false;
-        banner.textContent = 'WebMCP only runs in a secure context. Serve this page from https:// or http://localhost.';
-        log('err', 'Insecure context: WebMCP is unavailable.');
-        return;
-      }
-
-      const { ctx, source } = resolveModelContext();
+    function registerTools() {
+      const status = $('#mcp-status'), text = $('#mcp-status-text');
+      const ctx = window.isSecureContext ? resolveModelContext() : null;
       if (!ctx) {
-        statusEl.dataset.state = 'missing';
-        statusText.textContent = 'WebMCP not available';
-        banner.hidden = false;
-        banner.innerHTML =
-          'This browser does not expose <code>document.modelContext</code>, so no agent can see the tools. ' +
-          'The dashboard still works, and the buttons under <em>Imperative tools</em> run the same handlers. ' +
-          'To test with an agent, enable <code>chrome://flags/#enable-webmcp-testing</code>.';
-        log('info', 'document.modelContext not found. Running without agent tools.');
+        status.dataset.state = 'missing';
+        text.innerHTML = 'Agent mode is off in this browser. To turn it on, enable <code>chrome://flags/#enable-webmcp-testing</code> in Chrome and relaunch.';
+        log('info', 'WebMCP not available. The chat box still works.');
         return;
       }
-
-      let registered = 0;
+      let n = 0;
       for (const tool of TOOLS) {
         try {
-          // The AbortSignal unregisters the tool when aborted. Builds that
-          // predate the signal option simply ignore the second argument.
           ctx.registerTool(tool, { signal: registry.signal });
-          registered++;
-          log('ok', `registered ${tool.name} via ${source}`);
+          n++;
         } catch (err) {
-          // e.g. InvalidStateError on a duplicate name, TypeError on a bad schema
-          log('err', `registerTool(${tool.name}) failed: ${err.name}: ${err.message}`);
-          console.error(err);
+          log('err', `Could not register ${tool.name}: ${err.name}: ${err.message}`);
         }
       }
-
-      statusEl.dataset.state = source.startsWith('document') ? 'ready' : 'legacy';
-      statusText.textContent = `${source.split(' ')[0]} · ${registered + 1} tools`;
-      if (registered < TOOLS.length) {
-        banner.hidden = false;
-        banner.textContent = `${TOOLS.length - registered} imperative tool(s) failed to register. See the activity log.`;
-      }
-
-      
+      status.dataset.state = 'ready';
+      text.textContent = `Agent mode is on. ${n + 1} actions are available to AI agents in this browser.`;
+      log('ok', `Registered ${n} tools with WebMCP, plus the add_to_order form.`);
       window.addEventListener('pagehide', () => {
         registry.abort();
         if (typeof ctx.unregisterTool === 'function') {
-          for (const { name } of TOOLS) { try { ctx.unregisterTool(name); } catch { /* already gone */ } }
+          for (const { name } of TOOLS) { try { ctx.unregisterTool(name); } catch {} }
         }
       }, { once: true });
     }
 
-    
-    document.querySelector('.harness').addEventListener('click', async e => {
-      const demo = e.target.closest('[data-demo]')?.dataset.demo;
-      if (demo === 'query') {
-        const res = await TOOLS[0].execute({ status: ['todo', 'in_progress'], sortBy: 'priority', limit: 5 });
-        log('info', res.content[0].text);
-      } else if (demo === 'advance') {
-        const top = queryTasks({ status: ['todo', 'in_progress'], limit: 1 }).tasks[0];
-        if (!top) return log('info', 'Nothing left to complete.');
-        await TOOLS[1].execute({ id: top.id, status: 'done' });
-      }
-    });
+    const NUMBERS = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, couple: 2 };
+    const DRINK_WORDS = [
+      [/flat\s*whites?/, 'flat_white'], [/cold\s*brews?/, 'cold_brew'], [/matcha/, 'matcha_latte'],
+      [/chai/, 'chai_latte'], [/mochas?/, 'mocha'], [/cap+uc+inos?/, 'cappuccino'], [/lattes?/, 'latte'],
+      [/americanos?/, 'americano'], [/espressos?/, 'espresso'], [/coffees?|drip/, 'americano']
+    ];
+    const drinkIn = t => DRINK_WORDS.find(([re]) => re.test(t))?.[1];
 
-
-    const COMMAND_TOOLS = {
-      create_task: guarded('create_task', createTask),
-      ...Object.fromEntries(TOOLS.map(t => [t.name, t.execute]))
-    };
-
-    async function callTool(name, args) {
-      const res = await COMMAND_TOOLS[name](args);
-      const text = res.content[0].text;
-      if (res.isError) throw new ToolError(text);
-      return JSON.parse(text);
-    }
-
-    const pad = n => String(n).padStart(2, '0');
-    const isoDate = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-    const addDays = n => { const d = new Date(); d.setDate(d.getDate() + n); return d; };
-    const WEEKDAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-    const fmtStatus = s => s.replace('_', ' ');
-
-    function parseDate(phrase) {
-      let p = phrase.trim().toLowerCase().replace(/[.,!?]+$/, '');
-      if (/^\d{4}-\d{2}-\d{2}$/.test(p)) return p;
-      if (p === 'today' || p === 'tonight' || p === 'eod') return isoDate(addDays(0));
-      if (p === 'tomorrow') return isoDate(addDays(1));
-      if (p === 'next week') return isoDate(addDays(7));
-      let m = p.match(/^in\s+(\d+)\s+(days?|weeks?)$/);
-      if (m) return isoDate(addDays(Number(m[1]) * (m[2].startsWith('week') ? 7 : 1)));
-      if (p === 'end of week' || p === 'eow') p = 'friday';
-      m = p.match(/^(?:next\s+|this\s+)?(sun|mon|tue|wed|thu|fri|sat)[a-z]*$/);
-      if (m) {
-        const target = WEEKDAYS.findIndex(w => w.startsWith(m[1]));
-        return isoDate(addDays((target - new Date().getDay() + 7) % 7 || 7));
-      }
-      if (/^(?:(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{1,2}|\d{1,2}\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*)$/.test(p)) {
-        const t = Date.parse(`${p} ${new Date().getFullYear()}`);
-        if (!Number.isNaN(t)) return isoDate(new Date(t));
-      }
-      return null;
-    }
-
-    function normStatus(word) {
-      const w = word.toLowerCase();
-      if (/progress|start|doing|wip|working/.test(w)) return 'in_progress';
-      if (/done|complete|finish|closed|shipped/.test(w)) return 'done';
-      if (/to ?do|open|backlog|not started/.test(w)) return 'todo';
-      return null;
-    }
-
-    function parseCreate(text) {
-      let rest = ` ${text} `;
-      const tags = [];
-      rest = rest.replace(/\s#([\w-]+)/g, (_, t) => { tags.push(t); return ' '; });
-      let priority;
-      rest = rest.replace(/\s(?:!(high|medium|low)|(high|medium|low)[\s-]+priority|priority[:\s]+(high|medium|low)|(urgent|asap|critical))(?=\s)/i,
-        (_, a, b, c, d) => { priority = (a || b || c || (d && 'high')).toLowerCase(); return ' '; });
-      let due;
-      rest = rest.replace(/\s(?:due|by|on)\s+((?:(?!\s(?:due|by|on)\s).)+?)\s*$/i, (whole, phrase) => {
-        const d = parseDate(phrase);
-        if (!d) return whole;
-        due = d;
-        return ' ';
-      });
-      if (!due) rest = rest.replace(/\s(today|tomorrow)\s*$/i, (_, p) => { due = parseDate(p); return ' '; });
-      const title = rest.replace(/\s+/g, ' ').trim().replace(/[,;:-]+$/, '').trim();
-      return stripUndefined({ title, priority, due, tags: tags.join(',') });
-    }
-
-    function parseQuery(l) {
-      const args = { sortBy: /\b(due|deadline|soon)/.test(l) ? 'due' : 'priority', limit: 20 };
-      if (/overdue|late\b|past due/.test(l)) {
-        args.status = ['todo', 'in_progress'];
-        args.dueBefore = isoDate(addDays(-1));
-      } else if (/in progress|started|doing|wip/.test(l)) args.status = ['in_progress'];
-      else if (/\b(to ?do|not started)\b/.test(l)) args.status = ['todo'];
-      else if (/\b(done|completed|finished|shipped)\b/.test(l)) args.status = ['done'];
-      else if (/\b(open|remaining|pending|active|left)\b/.test(l)) args.status = ['todo', 'in_progress'];
-      const pr = ['high', 'medium', 'low'].filter(p => new RegExp(`\\b${p}\\b`).test(l));
-      if (/urgent/.test(l)) pr.push('high');
-      if (pr.length) args.priority = [...new Set(pr)];
-      const t = l.match(/#([\w-]+)/) || l.match(/\b(?:about|tagged|tag|matching|containing)\s+["']?([\w -]+?)["']?\??$/);
-      if (t) args.text = t[1].trim();
+    function parseItem(t) {
+      const drink = drinkIn(t);
+      if (!drink) return null;
+      const q = t.match(/\b(\d{1,2}|one|two|three|four|five|six|seven|eight|nine|ten|couple)\b/);
+      const args = { drink, quantity: q ? (NUMBERS[q[1]] ?? Number(q[1])) : 1 };
+      if (/\b(small|tall|short)\b/.test(t)) args.size = 'small';
+      else if (/\b(large|big|venti)\b/.test(t)) args.size = 'large';
+      else if (/\b(medium|regular|grande)\b/.test(t)) args.size = 'medium';
+      if (/\boat\b/.test(t)) args.milk = 'oat';
+      else if (/\balmond\b/.test(t)) args.milk = 'almond';
+      else if (/\b(skim|non-?fat)\b/.test(t)) args.milk = 'skim';
+      else if (/\bwhole\b/.test(t)) args.milk = 'whole';
+      else if (/\b(no milk|without milk|black)\b/.test(t)) args.milk = 'none';
+      if (/extra shot|double shot|add(ed)? (a |an )?shot|with (a |an )?(extra )?shot|\bdoppio\b/.test(t)) args.extraShot = true;
+      if (/\b(iced|ice|cold)\b/.test(t)) args.iced = true;
       return args;
     }
 
-    function parseRules(input) {
-      const s = input.trim().replace(/[.!]+$/, '');
-      const l = s.toLowerCase();
-      let m;
-      if (/^(help|\?|commands|what can you do)/.test(l)) return { help: true };
-      if ((m = s.match(/^(?:add|create|new)\s+(?:(?:a\s+)?(?:task|item)\s*:?\s+)?(.+)$/i))) {
-        return { steps: [{ tool: 'create_task', args: parseCreate(m[1]) }] };
+    function parseOrderItems(t) {
+      const items = [];
+      for (const seg of t.split(/\s*(?:,|;|\band\b|\bplus\b|&|\balso\b)\s*/).filter(Boolean)) {
+        const parsed = parseItem(seg);
+        if (parsed) items.push({ text: seg, args: parsed });
+        else if (items.length) {
+          const last = items[items.length - 1];
+          last.text += ' ' + seg;
+          last.args = parseItem(last.text);
+        }
       }
-      if ((m = s.match(/^(?:delete|remove)\s+(.+)$/i))) return { steps: [{ tool: 'delete_task', args: { ref: m[1] } }] };
-      if ((m = s.match(/^(?:move|mark|set|change)\s+(.+?)\s+(?:to|as)\s+(.+)$/i)) ||
-          (m = s.match(/^(?:mark|set)\s+(.+?)\s+(done|complete|completed|todo|to do|in progress|started)$/i))) {
-        const status = normStatus(m[2]);
-        if (status) return { steps: [{ tool: 'update_task_status', args: { ref: m[1], status } }] };
-      }
-      if ((m = s.match(/^(?:start|begin|work on)\s+(.+)$/i))) return { steps: [{ tool: 'update_task_status', args: { ref: m[1], status: 'in_progress' } }] };
-      if ((m = s.match(/^(?:finish|complete|close|done with|done)\s+(.+)$/i))) return { steps: [{ tool: 'update_task_status', args: { ref: m[1], status: 'done' } }] };
-      if ((m = s.match(/^(?:reopen|reset)\s+(.+)$/i))) return { steps: [{ tool: 'update_task_status', args: { ref: m[1], status: 'todo' } }] };
-      if (/^(show|list|find|search|what|which|get|anything)\b/.test(l) || /^(overdue|backlog|everything|all)\b/.test(l)) {
-        return { steps: [{ tool: 'query_tasks', args: parseQuery(l) }] };
-      }
-      return null;
+      return items.map(i => i.args);
     }
 
-    function resolveRef(ref) {
-      const r = String(ref).trim().replace(/^(?:task|item)\s+/i, '').replace(/^["']|["']$/g, '');
-      const m = r.match(/^#?(\d+)$/);
+    function lineRef(t) {
+      const m = t.match(/(?:#|line\s*|item\s*|number\s*)(\d+)/);
       if (m) return Number(m[1]);
-      const q = r.toLowerCase().replace(/^the\s+/, '');
-      let hits = tasks.filter(t => t.title.toLowerCase().includes(q));
-      if (!hits.length) {
-        const words = q.split(/\W+/).filter(w => w.length > 2);
-        const scored = tasks
-          .map(t => [t, words.filter(w => t.title.toLowerCase().includes(w) || t.tags.includes(w)).length])
-          .filter(([, n]) => n > 0);
-        const best = Math.max(0, ...scored.map(([, n]) => n));
-        hits = scored.filter(([, n]) => n === best).map(([t]) => t);
-      }
-      if (hits.length === 1) return hits[0].id;
-      if (!hits.length) throw new ToolError(`I couldn't find an item matching "${r}".`);
-      throw new ToolError(`"${r}" matches ${hits.length} items: ${hits.map(t => `#${t.id} ${t.title}`).join('; ')}. Use the #id.`);
+      const drink = drinkIn(t);
+      const hit = drink && [...order].reverse().find(l => l.drink === drink);
+      return hit ? hit.line : null;
     }
 
-    function stripUndefined(o) {
-      return Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined && v !== null && v !== ''));
+    function parseRules(input) {
+      const t = input.toLowerCase().replace(/[’']/g, "'").replace(/[.!?]+$/, '').trim();
+      if (/^(help|\?|what can (you|i) (do|say))/.test(t)) return { help: true };
+      if (/\b(remove|delete|take off|drop|cancel|no more)\b/.test(t) && (lineRef(t) || /#|line|item/.test(t) || drinkIn(t))) {
+        const line = lineRef(t);
+        if (!line) return { error: "I couldn't find that drink in your order." };
+        return { steps: [{ tool: 'remove_from_order', args: { line } }] };
+      }
+      if (/\b(cancel|clear|start over|empty|never ?mind|reset|scratch that)\b/.test(t)) return { steps: [{ tool: 'clear_order', args: {} }] };
+      if (/\b(menu|what do you (have|serve|sell)|what drinks|options|prices?)\b/.test(t)) return { steps: [{ tool: 'get_menu', args: {} }] };
+      const items = drinkIn(t) ? parseOrderItems(t) : [];
+      const wantsPlace = /\b(place|checkout|check out|pay|submit|confirm|order it|send it|go ahead|that'?s (it|all))\b/.test(t) || /^(yes|yep|yeah|sure|ok|okay|done)\b/.test(t);
+      if (items.length) {
+        const steps = items.map(args => ({ tool: 'add_to_order', args }));
+        if (wantsPlace && /\b(and|then)\s+(place|order|checkout|check out|pay|submit)/.test(t)) steps.push({ tool: 'place_order', args: {} });
+        return { steps };
+      }
+      if (wantsPlace) return { steps: [{ tool: 'place_order', args: {} }] };
+      if (/\b(my order|my cart|in my|what'?s in|show|total|how much|what did i)\b/.test(t)) return { steps: [{ tool: 'view_order', args: {} }] };
+      return null;
     }
 
     function describe(tool, out) {
       switch (tool) {
-        case 'create_task':
-          return `Added #${out.id} "${out.title}" · ${out.priority}` +
-            (out.due ? ` · due ${out.due}` : '') +
-            (out.tags.length ? ` · ${out.tags.map(t => '#' + t).join(' ')}` : '');
-        case 'query_tasks':
-          if (!out.matched) return 'No items match.';
-          return [
-            `${out.matched} item${out.matched === 1 ? '' : 's'} match${out.overdue ? `, ${out.overdue} overdue` : ''}:`,
-            ...out.tasks.map(t => `  #${t.id} ${t.title} — ${t.priority} · ${fmtStatus(t.status)}${t.due ? ` · due ${t.due}` : ''}`)
-          ].join('\n');
-        case 'update_task_status': {
-          const title = tasks.find(t => t.id === out.id)?.title ?? '';
-          return out.previous === out.status
-            ? `#${out.id} "${title}" is already ${fmtStatus(out.status)}.`
-            : `#${out.id} "${title}": ${fmtStatus(out.previous)} → ${fmtStatus(out.status)}`;
-        }
-        case 'delete_task':
-          return `Deleted #${out.deleted.id} "${out.deleted.title}".`;
+        case 'add_to_order': return `Added ${out.added.quantity} × ${out.added.item} (${out.added.price}).`;
+        case 'get_menu':
+          return ['Here\'s the menu:',
+            ...out.drinks.map(d => `  ${d.name} · ${d.price}`),
+            'Medium +$0.50, large +$1.00. Oat or almond milk +$0.75. Extra shot +$1.00.'].join('\n');
+        case 'view_order':
+          return out.items.length
+            ? ['Your order:', ...out.items.map(i => `  ${i.quantity} × ${i.item} · ${i.price}`), `Total ${out.total}`].join('\n')
+            : 'Your order is empty.';
+        case 'remove_from_order': return `Removed ${out.removed}. New total ${out.orderTotal}.`;
+        case 'clear_order': return out.cleared ? 'Cleared your order.' : 'Your order was already empty.';
+        case 'place_order': return `Order #${out.orderNumber} placed (${out.total}). It'll be ready in about ${out.readyInMinutes} minutes.`;
       }
       return JSON.stringify(out);
     }
 
     async function runSteps(steps, engine) {
       const lines = [];
+      let added = false;
       for (const step of steps) {
-        try {
-          const args = { ...step.args };
-          if ('ref' in args) { args.id = resolveRef(args.ref); delete args.ref; }
-          if (step.tool === 'delete_task' && engine === 'ai') {
-            const t = tasks.find(x => x.id === args.id);
-            if (t && !confirm(`The AI wants to delete #${t.id} "${t.title}". Allow?`)) {
-              lines.push(`Skipped deleting #${t.id}.`);
-              continue;
-            }
-          }
-          lines.push(describe(step.tool, await callTool(step.tool, args)));
-        } catch (err) {
-          if (!(err instanceof ToolError)) console.error(err);
-          lines.push(err instanceof ToolError ? err.message : 'Something went wrong running that command.');
-          return { text: lines.join('\n'), failed: true };
+        if (step.tool === 'place_order' && engine === 'ai' && order.length &&
+            !confirm(`Place your order for ${money(orderTotal())}?`)) {
+          lines.push('Okay, I didn\'t place it.');
+          continue;
         }
+        const res = await COMMAND_TOOLS[step.tool](step.args);
+        const text = res.content[0].text;
+        if (res.isError) return { text: [...lines, text].join('\n'), failed: true };
+        lines.push(describe(step.tool, JSON.parse(text)));
+        if (step.tool === 'add_to_order') added = true;
+        if (step.tool === 'place_order') added = false;
       }
+      if (added) lines.push(`Total so far ${money(orderTotal())}. Say "place my order" when you're ready.`);
       return { text: lines.join('\n'), failed: false };
     }
 
@@ -840,40 +736,36 @@
     const ai = { availability: 'unavailable', session: null };
     const aiUsable = () => ['available', 'downloadable', 'downloading'].includes(ai.availability);
 
-    const SYSTEM_PROMPT = `You turn a product manager's command into tool calls for a backlog app.
-Tools and the fields each one uses:
-- create_task: title (required), priority (low | medium | high), due (YYYY-MM-DD), tags (comma-separated)
-- query_tasks: statusFilter (todo | in_progress | done), priorityFilter (low | medium | high), text, overdue (true/false), sortBy (priority | due | created)
-- update_task_status: id, status (todo | in_progress | done)
-- delete_task: id
+    const SYSTEM_PROMPT = `You are the ordering assistant for a coffee shop. Turn the customer's message into actions.
+Menu: ${MENU.map(d => `${d.id} (${d.name}, ${money(d.cents)}${d.icedOnly ? ', always iced' : ''}): ${d.desc}`).join('; ')}.
+Sizes: small, medium (default), large. Milk: whole, skim, oat, almond, none.
+Actions:
+- add_to_order: drink (menu id, required), size, milk, extraShot, iced, quantity
+- view_order, get_menu, clear_order, place_order: no fields
+- remove_from_order: line (the line number from the current order)
 Rules:
-- Use item ids from the backlog you are given. Never invent ids.
-- Convert relative dates using today's date.
-- A command can need several steps, in order.
-- If the command is unclear or not about the backlog, return no steps and say why in reply.
-- reply is one short sentence.`;
+- Only use drinks from the menu. If the customer is vague ("something sweet and cold"), choose a fitting drink and say why in reply.
+- Only add place_order if the customer clearly asks to place, submit or check out.
+- If the message is not about ordering coffee, return no steps and answer briefly in reply.
+- reply is one short, friendly sentence.`;
 
     const PLAN_SCHEMA = {
       type: 'object',
       properties: {
         steps: {
           type: 'array',
-          maxItems: 5,
+          maxItems: 6,
           items: {
             type: 'object',
             properties: {
-              tool: { type: 'string', enum: ['create_task', 'query_tasks', 'update_task_status', 'delete_task'] },
-              id: { type: 'integer' },
-              title: { type: 'string' },
-              priority: { type: 'string', enum: ['low', 'medium', 'high'] },
-              due: { type: 'string' },
-              tags: { type: 'string' },
-              status: { type: 'string', enum: STATUSES },
-              statusFilter: { type: 'array', items: { type: 'string', enum: STATUSES } },
-              priorityFilter: { type: 'array', items: { type: 'string', enum: ['low', 'medium', 'high'] } },
-              text: { type: 'string' },
-              overdue: { type: 'boolean' },
-              sortBy: { type: 'string', enum: ['priority', 'due', 'created'] }
+              tool: { type: 'string', enum: Object.keys(COMMAND_TOOLS) },
+              drink: { type: 'string', enum: MENU.map(d => d.id) },
+              size: { type: 'string', enum: Object.keys(SIZES) },
+              milk: { type: 'string', enum: Object.keys(MILKS) },
+              extraShot: { type: 'boolean' },
+              iced: { type: 'boolean' },
+              quantity: { type: 'integer', minimum: 1, maximum: 10 },
+              line: { type: 'integer' }
             },
             required: ['tool']
           }
@@ -883,43 +775,25 @@ Rules:
       required: ['steps', 'reply']
     };
 
-    function mapAIStep(st) {
-      switch (st.tool) {
-        case 'create_task':
-          return { tool: st.tool, args: stripUndefined({ title: st.title, priority: st.priority, due: st.due, tags: st.tags }) };
-        case 'query_tasks': {
-          const args = stripUndefined({ status: st.statusFilter, priority: st.priorityFilter, text: st.text, sortBy: st.sortBy });
-          if (st.overdue) {
-            args.dueBefore = isoDate(addDays(-1));
-            if (!args.status?.length) args.status = ['todo', 'in_progress'];
-          }
-          return { tool: st.tool, args };
-        }
-        case 'update_task_status':
-          return { tool: st.tool, args: { ref: st.id ?? st.title ?? '', status: st.status } };
-        case 'delete_task':
-          return { tool: st.tool, args: { ref: st.id ?? st.title ?? '' } };
+    function toStep(st) {
+      if (st.tool === 'add_to_order') {
+        const args = { drink: st.drink };
+        for (const k of ['size', 'milk', 'extraShot', 'iced', 'quantity']) if (st[k] !== undefined) args[k] = st[k];
+        return { tool: st.tool, args };
       }
-    }
-
-    function buildPrompt(input) {
-      const now = new Date();
-      const backlog = tasks.map(t =>
-        `#${t.id} "${t.title}" | ${t.priority} | ${t.status}${t.due ? ` | due ${t.due}` : ''}${t.tags.length ? ` | tags ${t.tags.join(',')}` : ''}`
-      ).join('\n') || '(empty)';
-      return `Today is ${isoDate(now)} (${WEEKDAYS[now.getDay()]}).\nBacklog:\n${backlog}\n\nCommand: ${input}`;
+      if (st.tool === 'remove_from_order') return { tool: st.tool, args: { line: st.line } };
+      return { tool: st.tool, args: {} };
     }
 
     async function getSession() {
-      if (ai.session) return ai.session;
-      ai.session = LanguageModel.create({
-        ...LM_OPTS,
-        initialPrompts: [{ role: 'system', content: SYSTEM_PROMPT }],
-        monitor(m) {
-          m.addEventListener('downloadprogress', e => setEngineTag(Math.round(e.loaded * 100)));
-        }
-      }).then(s => { ai.availability = 'available'; setEngineTag(); return s; })
-        .catch(err => { ai.session = null; throw err; });
+      if (!ai.session) {
+        ai.session = LanguageModel.create({
+          ...LM_OPTS,
+          initialPrompts: [{ role: 'system', content: SYSTEM_PROMPT }],
+          monitor(m) { m.addEventListener('downloadprogress', e => setEngineNote(`downloading AI model ${Math.round(e.loaded * 100)}%`)); }
+        }).then(s => { ai.availability = 'available'; setEngineNote(); return s; })
+          .catch(err => { ai.session = null; throw err; });
+      }
       return ai.session;
     }
 
@@ -927,26 +801,23 @@ Rules:
       const base = await getSession();
       const s = typeof base.clone === 'function' ? await base.clone() : base;
       try {
-        const plan = JSON.parse(await s.prompt(buildPrompt(input), { responseConstraint: PLAN_SCHEMA }));
+        const current = order.length
+          ? order.map(l => `line ${l.line}: ${l.quantity} x ${lineLabel(l)}`).join('\n')
+          : '(empty)';
+        const raw = await s.prompt(`Current order:\n${current}\n\nCustomer: ${input}`, { responseConstraint: PLAN_SCHEMA });
+        const plan = JSON.parse(raw);
         const steps = (Array.isArray(plan.steps) ? plan.steps : [])
-          .filter(st => st && st.tool in COMMAND_TOOLS)
-          .slice(0, 5)
-          .map(mapAIStep);
-        return { steps, reply: String(plan.reply ?? '') };
+          .filter(st => st && st.tool in COMMAND_TOOLS && (st.tool !== 'add_to_order' || byId[st.drink]))
+          .slice(0, 6)
+          .map(toStep);
+        return { steps, reply: String(plan.reply ?? '').trim() };
       } finally {
         if (s !== base) s.destroy?.();
       }
     }
 
-    function setEngineTag(progress) {
-      const labels = {
-        available: 'rules + Gemini Nano',
-        downloadable: 'rules + Gemini Nano (downloads on first use)',
-        downloading: 'rules + Gemini Nano (downloading)'
-      };
-      const tag = $('#engine-tag');
-      tag.textContent = progress != null ? `downloading model ${progress}%` : labels[ai.availability] ?? 'rules only';
-      tag.classList.toggle('accent', aiUsable());
+    function setEngineNote(text) {
+      $('#engine-note').textContent = text ?? (aiUsable() ? 'On-device AI ready' : 'On-device AI not available');
     }
 
     async function detectAI() {
@@ -955,100 +826,93 @@ Rules:
       } catch (err) {
         console.warn('LanguageModel.availability failed', err);
       }
-      setEngineTag();
       $('#engine option[value="ai"]').disabled = !aiUsable();
-      log('info', aiUsable()
-        ? `Built-in AI (Prompt API): ${ai.availability}. Free-form commands enabled.`
-        : 'Built-in AI not available. Commands use the rule-based parser.');
+      setEngineNote();
+      log('info', aiUsable() ? `On-device AI: ${ai.availability}.` : 'On-device AI not available. Using rules only.');
     }
 
-    const HELP = `Things I understand:
-  add <title> [high|low priority] [due friday|tomorrow|2026-10-20] [#tag]
-  show open · show high · what's overdue? · list done · find #bug
-  start <item> · complete <item> · reopen <item>
-  move <item> to in progress
-  delete <item>
-<item> is a #id or words from the title. Separate commands with ";".
-With Chrome's built-in AI available, you can also type freely, e.g.
-  "I finished the PRD, now start on the pricing test"`;
+    const HELP = `You can say things like:
+  "A large oat latte with an extra shot"
+  "Two small black coffees and an iced mocha"
+  "What's on the menu?" · "What's in my order?"
+  "Remove the mocha" · "Cancel my order"
+  "Place my order"`;
 
-    const transcript = $('#transcript');
-    function addMsg(kind, text, via, isErr) {
+    const chat = $('#chat');
+    function say(kind, text, via, isErr) {
       const el = document.createElement('div');
-      el.className = `msg ${kind}${isErr ? ' err' : ''}`;
+      el.className = `bubble ${kind}${isErr ? ' err' : ''}`;
       el.textContent = text;
       if (via) {
         const v = document.createElement('span');
         v.className = 'via';
-        v.textContent = `via ${via}`;
+        v.textContent = via;
         el.append(v);
       }
-      transcript.append(el);
-      transcript.scrollTop = transcript.scrollHeight;
+      chat.append(el);
+      el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
       return el;
     }
 
-    async function handleCommand(input) {
+    const VIA_RULES = 'understood instantly';
+    const VIA_AI = 'understood by on-device AI';
+
+    async function handle(input) {
       const mode = $('#engine').value;
       if (mode !== 'ai') {
-        const parts = input.split(/\s*;\s*|\n+/).filter(Boolean);
-        const parsed = parts.map(parseRules);
-        if (parsed.some(p => p?.help)) return addMsg('bot', HELP, 'rules');
-        if (parsed.every(Boolean)) {
-          const res = await runSteps(parsed.flatMap(p => p.steps), 'rules');
-          return addMsg('bot', res.text, 'rules', res.failed);
+        const parsed = parseRules(input);
+        if (parsed?.help) return say('bot', HELP, VIA_RULES);
+        if (parsed?.error) return say('bot', parsed.error, VIA_RULES, true);
+        if (parsed) {
+          const res = await runSteps(parsed.steps, 'rules');
+          return say('bot', res.text, VIA_RULES, res.failed);
         }
         if (mode === 'rules' || !aiUsable()) {
-          const bad = parts[parsed.findIndex(p => !p)];
-          return addMsg('bot', `I didn't understand "${bad}". Type "help" to see what I can do.`, 'rules', true);
+          return say('bot', `Sorry, I didn't catch a drink in that. Try "a large oat latte", or say "help".`, null, true);
         }
       }
-      if (!aiUsable()) {
-        return addMsg('bot', "Chrome's built-in AI isn't available in this browser. Switch the engine to Auto or Rules only.", null, true);
-      }
-      const pending = addMsg('bot', 'Thinking…', 'Gemini Nano · on-device');
+      if (!aiUsable()) return say('bot', "The on-device AI isn't available in this browser. Switch the engine back to Auto.", null, true);
+      const pending = say('bot', 'Thinking…', VIA_AI);
       try {
         const plan = await planWithAI(input);
         pending.remove();
-        if (!plan.steps.length) {
-          return addMsg('bot', plan.reply || "I couldn't turn that into a backlog action.", 'Gemini Nano · on-device');
-        }
+        if (!plan.steps.length) return say('bot', plan.reply || "Sorry, I couldn't turn that into an order.", VIA_AI);
         const res = await runSteps(plan.steps, 'ai');
-        return addMsg('bot', res.text, 'Gemini Nano · on-device', res.failed);
+        return say('bot', [plan.reply, res.text].filter(Boolean).join('\n'), VIA_AI, res.failed);
       } catch (err) {
         pending.remove();
         console.error(err);
-        return addMsg('bot', `The on-device model failed (${err.name}: ${err.message}). Try a simpler command or type "help".`, 'Gemini Nano', true);
+        return say('bot', 'The on-device AI had trouble with that. Try something simpler, like "a medium latte".', VIA_AI, true);
       }
     }
 
-    const cmdInput = $('#cmd');
-    const cmdRun = $('#cmd-run');
-    $('#cmd-form').addEventListener('submit', async e => {
+    const askInput = $('#ask'), askBtn = $('#ask-btn');
+    $('#ask-form').addEventListener('submit', async e => {
       e.preventDefault();
-      const input = cmdInput.value.trim();
-      if (!input || cmdRun.disabled) return;
-      cmdInput.value = '';
-      addMsg('you', input);
-      cmdRun.disabled = true;
-      try {
-        await handleCommand(input);
-      } finally {
-        cmdRun.disabled = false;
-        cmdInput.focus();
-      }
+      const input = askInput.value.trim();
+      if (!input || askBtn.disabled) return;
+      askInput.value = '';
+      say('you', input);
+      askBtn.disabled = true;
+      try { await handle(input); } finally { askBtn.disabled = false; askInput.focus(); }
     });
-    $('#cmd-examples').addEventListener('click', e => {
-      const cmd = e.target.closest('[data-cmd]')?.dataset.cmd;
-      if (!cmd) return;
-      cmdInput.value = cmd;
-      $('#cmd-form').requestSubmit();
+    $('#examples').addEventListener('click', e => {
+      const chip = e.target.closest('.chip');
+      if (!chip) return;
+      askInput.value = chip.textContent;
+      $('#ask-form').requestSubmit();
+    });
+
+    $('#dev-toggle').addEventListener('click', e => {
+      const dev = $('#dev');
+      dev.hidden = !dev.hidden;
+      e.currentTarget.setAttribute('aria-expanded', String(!dev.hidden));
+      if (!dev.hidden) dev.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
 
     render();
-    registerImperativeTools();
+    registerTools();
     detectAI();
-    log('info', `Declarative tool "create_task" is defined on <form id="create-task-form">.`);
   })();
   </script>
 </body>

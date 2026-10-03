@@ -1,41 +1,42 @@
-# Agentic Product Management Dashboard
+# Brew Bot: an agent-powered café (WebMCP demo)
 
-A single-file proof of concept (`index.html`, vanilla HTML/CSS/JS, no build step) for **WebMCP**, the draft web standard from the W3C Web Machine Learning Community Group. WebMCP lets a page expose its own functions to an AI agent running in the browser as typed tools, so the agent calls those functions directly and does not have to scrape the DOM or simulate clicks.
+**Live demo:** https://prachi050.github.io/agentic-product-management-dashboard/
 
-The page is a small product backlog dashboard. It exposes three tools:
+Order coffee by asking in plain English. Type *"a large oat latte with an extra shot"* and an agent adds it to your order. Type *"place my order"* and you can watch it go from Received to Brewing to Ready.
+
+This is a proof of concept for **WebMCP**, the draft web standard from the W3C Web Machine Learning Community Group. WebMCP lets a website hand AI agents in the browser a list of actions it supports, so an agent calls those actions directly instead of scraping the page or simulating clicks. Everything is plain HTML, CSS and JavaScript in one file (`index.html`), with no build step, server or database.
 
 | Tool | API | What it does |
 |---|---|---|
-| `create_task` | **Declarative**: `toolname` / `tooldescription` / `toolautosubmit` on a `<form>` | The browser builds the JSON Schema from the form controls. The submit handler sees `SubmitEvent.agentInvoked` and sends structured JSON back through `SubmitEvent.respondWith()`. |
-| `query_tasks` | **Imperative**: `document.modelContext.registerTool()` | Filters, sorts and aggregates tasks (overdue count, counts by status). Marked `readOnlyHint`. |
+| `add_to_order` | **Declarative**: `toolname` / `tooldescription` / `toolautosubmit` on the "Customize a drink" `<form>` | The browser builds the input schema from the form fields. The submit handler sends a structured result back with `SubmitEvent.respondWith()`. |
+| `get_menu`, `view_order` | **Imperative**: `document.modelContext.registerTool()` | Read the menu, prices and current order. Marked `readOnlyHint`. |
+| `remove_from_order`, `clear_order` | **Imperative** | Edit the order. `clear_order` is marked `destructiveHint`. |
+| `place_order` | **Imperative** | Places the order, but only after the customer confirms. |
+
+- **The chat box.** Simple requests are handled instantly by a rule-based parser that works in every browser. Free-form requests (*"something sweet and cold"*) go to Chrome's built-in on-device model (Gemini Nano, through the Prompt API) when it's available. The model returns a JSON plan constrained by a schema, and the plan can only name the tools above.
+- **One set of tools.** The chat box, the menu buttons and outside AI agents all call the same tool handlers.
+- **Simple by default.** Technical details (WebMCP status, the tool list and a live activity log) sit behind the **How it works** button.
+
+## Second demo: Agentic Product Management Dashboard (`dashboard.html`)
+
+**Live:** https://prachi050.github.io/agentic-product-management-dashboard/dashboard.html
+
+A more technical, developer-facing version of the same ideas: a product backlog that agents can read and update.
+
+| Tool | API | What it does |
+|---|---|---|
+| `create_task` | **Declarative** form tool | The submit handler sees `SubmitEvent.agentInvoked` and returns JSON through `SubmitEvent.respondWith()`. |
+| `query_tasks` | **Imperative** | Filters, sorts and aggregates tasks (overdue count, counts by status). Marked `readOnlyHint`. |
 | `update_task_status` | **Imperative** | Changes a task's status. Validates input and returns `isError` results the model can act on. |
 | `delete_task` | **Imperative** | Removes an item. Marked `destructiveHint`, and an AI-planned delete asks the user to confirm first. |
 
-## Brew Bot: the coffee-ordering demo (`coffee.html`)
-
-This is a simpler, friendlier demo. Type *"a large oat latte with an extra shot"* and an agent orders it for you. Type *"place my order"* and you can watch it go from Received to Brewing to Ready.
-
-- **Ordering:** a declarative WebMCP form (`add_to_order`) and five imperative tools (`get_menu`, `view_order`, `remove_from_order`, `clear_order`, `place_order`).
-- **Confirmation:** `place_order` asks the customer to confirm before an outside agent can place an order.
-- **The chat box:** same rules-first, on-device-AI-second design as the dashboard.
-- **Hidden details:** technical details stay behind the **How it works** button. No server, no database: the order lives only in the browser tab.
-
-Live: `https://prachi050.github.io/agentic-product-management-dashboard/coffee.html`
-
-## Command box
-
-You can also type commands into the page, such as `add Fix login bug high priority due friday #bug`, `start the pricing test` or `what's overdue?`. Type `help` to list them. Everything runs in the browser, with no server, database or API key.
-
-- **Rules first.** A small rule-based parser handles the common commands instantly and works in every browser.
-- **On-device AI second.** Some commands are too freeform for the rules, like *"I finished the PRD, now start on the pricing test"*. When Chrome's built-in model (Gemini Nano, through the Prompt API) is available, the page sends those to it. The model sees the current backlog and today's date, and returns a JSON plan constrained by a schema (`responseConstraint`). The plan can only name the four tools above.
-- **Same tools.** Both paths call the same tool handlers that WebMCP agents use, so every command shows up in the *Agent activity* log.
-- **Engine control.** The engine menu (Auto / Rules only / AI only) lets you show each path on its own. The backlog is kept in memory and resets on reload.
+It has its own command box (`add Fix login bug high priority due friday #bug`, `what's overdue?`, `help`) with an engine menu (Auto / Rules only / AI only) to show each path on its own.
 
 ## Design notes
 
-- **Progressive enhancement.** The dashboard works in any browser. The WebMCP tools are added only when the browser supports them.
+- **Progressive enhancement.** Both pages work in any browser. The WebMCP tools are added only when the browser supports them.
 - **Feature detection.** The page uses `document.modelContext` first. It falls back to `navigator.modelContext`, which early previews used and Chrome 150 deprecated. If neither exists, or the page is not in a secure context, it shows a banner and keeps working.
-- **One code path.** The human UI, the declarative form and the imperative tools all call the same functions (`createTask`, `queryTasks`, `updateTaskStatus`), so what an agent does matches what a person can do.
+- **One code path.** The human UI, the declarative form and the imperative tools all call the same functions, so what an agent does matches what a person can do.
 - **Error contract.** Each `execute()` is wrapped. A validation failure becomes `{ isError: true, content: [...] }` with a message the model can recover from. An unexpected exception is logged and not exposed to the model.
 - **Lifecycle.** Tools are registered with an `AbortSignal` and removed on `pagehide`. The page also calls `unregisterTool()` for builds that don't support the signal.
 - **Safety.** Text from the agent or the user is written with `textContent`, never `innerHTML`.
@@ -59,20 +60,20 @@ cd agentic-product-management-dashboard
 python3 -m http.server 8000      # or: npx serve .
 ```
 
-Open <http://localhost:8000>. The badge at the top right should show a green dot and **document.modelContext · 3 tools**. In DevTools you can check `typeof document.modelContext.registerTool` (it should be `"function"`).
+Open <http://localhost:8000> for Brew Bot (click **How it works**: it should say *Agent mode is on*) or <http://localhost:8000/dashboard.html> for the dashboard (the badge should show a green dot). In DevTools you can check `typeof document.modelContext.registerTool` (it should be `"function"`).
 
 ### 4. Install the inspector extension
 Install the **Model Context Tool Inspector** extension from the Chrome Web Store. It lists the tools the current page registers, shows each tool's input schema, and lets you call tools by hand or through an AI agent.
 
 ### 5. Test the tools
-1. Open the extension on the page. You should see `create_task` (from the form), `query_tasks` and `update_task_status`.
+1. Open the extension on Brew Bot. You should see `add_to_order` (from the form) and the five imperative tools. Try `add_to_order`, then `place_order`, and confirm the prompt. The steps below use the dashboard (`dashboard.html`); open the extension there and you should see `create_task`, `query_tasks`, `update_task_status` and `delete_task`.
 2. **Declarative:** call `create_task` with `{"title": "Add SSO to enterprise plan", "priority": "high"}`. The form fills in, highlights while the agent is active (`:tool-form-active`), and submits on its own because of `toolautosubmit`. The inspector should get back `{"ok": true, "task": {...}}`.
 3. **Imperative:** call `query_tasks` with `{"status": ["todo"], "sortBy": "due"}`, then `update_task_status` with an id from that result.
 4. **Error path:** call `update_task_status` with `{"id": 999, "status": "done"}`. You should get an `isError` result, and the error appears in the *Agent activity* log.
 5. **Agent run:** if the inspector has an agent or model option, give it a goal such as *"Move the highest-priority open item to in progress and add a follow-up item due next Friday."* Watch the activity log to see it chain the tools.
 
 ### 6. Test the fallback
-Open the same URL in a browser without the flag (or in Firefox or Safari). The badge turns red, a banner explains why, and the dashboard plus the **Imperative tools** demo buttons still work.
+Open the same URL in a browser without the flag (or in Firefox or Safari). The badge turns red, a banner explains why, and both pages still work.
 
 ## Troubleshooting
 
