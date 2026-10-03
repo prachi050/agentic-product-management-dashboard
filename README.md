@@ -9,6 +9,16 @@ The page is a small product backlog dashboard. It exposes three tools:
 | `create_task` | **Declarative**: `toolname` / `tooldescription` / `toolautosubmit` on a `<form>` | The browser builds the JSON Schema from the form controls. The submit handler sees `SubmitEvent.agentInvoked` and sends structured JSON back through `SubmitEvent.respondWith()`. |
 | `query_tasks` | **Imperative**: `document.modelContext.registerTool()` | Filters, sorts and aggregates tasks (overdue count, counts by status). Marked `readOnlyHint`. |
 | `update_task_status` | **Imperative** | Changes a task's status. Validates input and returns `isError` results the model can act on. |
+| `delete_task` | **Imperative** | Removes an item. Marked `destructiveHint`, and an AI-planned delete asks the user to confirm first. |
+
+## Command box
+
+You can also type commands into the page, such as `add Fix login bug high priority due friday #bug`, `start the pricing test` or `what's overdue?`. Type `help` to list them. Everything runs in the browser, with no server, database or API key.
+
+- **Rules first.** A small rule-based parser handles the common commands instantly and works in every browser.
+- **On-device AI second.** Some commands are too freeform for the rules, like *"I finished the PRD, now start on the pricing test"*. When Chrome's built-in model (Gemini Nano, through the Prompt API) is available, the page sends those to it. The model sees the current backlog and today's date, and returns a JSON plan constrained by a schema (`responseConstraint`). The plan can only name the four tools above.
+- **Same tools.** Both paths call the same tool handlers that WebMCP agents use, so every command shows up in the *Agent activity* log.
+- **Engine control.** The engine menu (Auto / Rules only / AI only) lets you show each path on its own. The backlog is kept in memory and resets on reload.
 
 ## Design notes
 
