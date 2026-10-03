@@ -695,14 +695,19 @@
     $('#place-btn').addEventListener('click', () => COMMAND_TOOLS.place_order());
 
     const itemForm = $('#item-form');
-    itemForm.addEventListener('submit', async e => {
+    itemForm.addEventListener('submit', e => {
       e.preventDefault();
-      const res = await COMMAND_TOOLS.add_to_order(Object.fromEntries(new FormData(itemForm)));
-      if (e.agentInvoked && typeof e.respondWith === 'function') e.respondWith(Promise.resolve(res));
-      if (!res.isError) {
-        itemForm.reset();
-        $('#f-item').value = 'latte';
+      const result = COMMAND_TOOLS.add_to_order(Object.fromEntries(new FormData(itemForm)));
+      if (e.agentInvoked) {
+        if (typeof e.respondWith === 'function') e.respondWith(result);
+        return;
       }
+      result.then(res => {
+        if (!res.isError) {
+          itemForm.reset();
+          $('#f-item').value = 'latte';
+        }
+      });
     });
     window.addEventListener('toolactivated', e => log('agent', `agent is filling the "${e.toolName ?? 'add_to_order'}" form`));
     window.addEventListener('toolcancel', e => log('agent', `agent cancelled the "${e.toolName ?? 'add_to_order'}" form`));
