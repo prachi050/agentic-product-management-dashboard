@@ -21,7 +21,7 @@ This is a proof of concept for **WebMCP**, the draft web standard from the W3C W
 
 The "What can I get you?" box is the page's own small agent, and it uses the same tools.
 
-- **Rules first.** Common requests (*"two small cold brews and a honey oat latte"*, *"remove the croissant"*, *"my name is Sam"*, *"place my order"*) are understood instantly by a rule-based parser that works in every browser.
+- **Rules first.** Common requests (*"two cold brews and a honey oat latte"*, *"remove the croissant"*, *"my name is Sam"*, *"place my order"*) are understood instantly by a rule-based parser that works in every browser.
 - **On-device AI second.** Free-form requests (*"something sweet and cold"*) go to Chrome's built-in model, Gemini Nano, through the Prompt API, when it's available. The model sees the menu and the current order. It returns a JSON plan constrained by a schema (`responseConstraint`), and the plan can only name the tools above.
 - **Same tools everywhere.** The chat box, the menu's **Add** buttons and outside AI agents all call the same tool handlers, so every action shows up in the activity log.
 
@@ -41,7 +41,7 @@ The "What can I get you?" box is the page's own small agent, and it uses the sam
 Open the live demo and type into the chat box, or tap any line on the menu board. Try:
 - `A large oat latte with an extra shot`
 - `A cortado and an almond croissant`
-- `Two small cold brews and a honey oat latte`
+- `Two cold brews and a honey oat latte`
 - `What's on the menu?` · `What's in my order?`
 - `Remove the croissant` · `Cancel my order`
 - `My name is Sam` · `Place my order`

@@ -272,10 +272,9 @@
               </div>
               <div>
                 <label for="f-size">Size</label>
-                <select id="f-size" name="size" toolparamdescription="Cup size for drinks. Medium if not specified.">
-                  <option value="small">Small</option>
-                  <option value="medium" selected>Medium</option>
-                  <option value="large">Large</option>
+                <select id="f-size" name="size" toolparamdescription="Cup size for drinks: regular (the menu price) or large. Regular if not specified.">
+                  <option value="regular" selected>Regular</option>
+                  <option value="large">Large (+$1.00)</option>
                 </select>
               </div>
               <div>
@@ -386,7 +385,8 @@
       { id: 'blueberry_scone',     sec: 'Bakery',       name: 'Blueberry scone',             cents: 395, food: true,    desc: 'With a lemon glaze' },
       { id: 'banana_bread',        sec: 'Bakery',       name: 'Banana bread',                cents: 375, food: true,    desc: 'A thick slice, served warm' }
     ];
-    const SIZES = { small: 0, medium: 50, large: 100 };
+    const SIZES = { regular: 0, large: 100 };
+    const SIZE_ALIASES = { small: 'regular', medium: 'regular', tall: 'regular', short: 'regular', grande: 'regular', venti: 'large', big: 'large' };
     const MILKS = { whole: 0, skim: 0, oat: 75, almond: 75, none: 0 };
     const EXTRA_SHOT = 100;
     const byId = Object.fromEntries(MENU.map(d => [d.id, d]));
@@ -415,7 +415,9 @@
         l.milk !== d.milk && (l.milk === 'none' ? 'no milk' : `${l.milk} milk`),
         l.extraShot && 'extra shot'
       ].filter(Boolean);
-      return cap(`${l.size} ${iced}${d.name.toLowerCase()}`) + (extras.length ? `, ${extras.join(', ')}` : '');
+      const prefix = `${l.size === 'large' ? 'large ' : ''}${iced}`;
+      const name = prefix ? cap(prefix) + d.name.replace(/^[A-Z](?=[a-z])/, c => d.id === 'english_breakfast' ? c : c.toLowerCase()) : d.name;
+      return name + (extras.length ? `, ${extras.join(', ')}` : '');
     }
 
     function publicLine(l) {
@@ -428,14 +430,14 @@
           id: d.id, name: d.name, price: money(d.cents), description: d.desc,
           ...(d.icedOnly && { icedOnly: true }), ...(d.food && { food: true })
         }))])),
-        sizes: { small: '+$0.00', medium: '+$0.50', large: '+$1.00' },
+        sizes: { regular: '+$0.00', large: '+$1.00' },
         milks: { whole: '+$0.00', skim: '+$0.00', oat: '+$0.75', almond: '+$0.75', none: '+$0.00' },
         extraShot: money(EXTRA_SHOT),
-        note: 'Bakery items have no size or milk options. Drink prices are for a small.'
+        note: 'Menu prices are for a regular. Bakery items have no size or milk options.'
       };
     }
 
-    function addToOrder({ item, size = 'medium', milk, extraShot = false, iced = false, quantity = 1 } = {}) {
+    function addToOrder({ item, size = 'regular', milk, extraShot = false, iced = false, quantity = 1 } = {}) {
       const d = findItem(item);
       if (!d) throw new ToolError(`"${item}" isn't on the menu. Use get_menu to see the item ids.`);
       quantity = Number(quantity) || 1;
@@ -444,8 +446,9 @@
       if (d.food) {
         line = { line: nextLine++, item: d.id, quantity, unitCents: d.cents };
       } else {
-        size = String(size || 'medium').toLowerCase();
-        if (!(size in SIZES)) throw new ToolError('size must be small, medium or large.');
+        size = String(size || 'regular').toLowerCase();
+        size = SIZE_ALIASES[size] ?? size;
+        if (!(size in SIZES)) throw new ToolError('size must be regular or large.');
         milk = milk ? String(milk).toLowerCase() : d.milk;
         if (!(milk in MILKS)) throw new ToolError('milk must be whole, skim, oat, almond or none.');
         const toBool = v => v === true || v === 'true' || v === 'on';
@@ -543,7 +546,7 @@
       }
       b.querySelector('.pr').textContent = money(d.cents).replace('$', '');
       b.title = d.desc;
-      b.setAttribute('aria-label', `Add ${d.food ? 'a' : 'a medium'} ${d.name}, ${money(d.cents)}`);
+      b.setAttribute('aria-label', `Add ${d.name}, ${money(d.cents)}`);
       b.addEventListener('click', () => COMMAND_TOOLS.add_to_order({ item: d.id }));
       return b;
     }
@@ -575,12 +578,11 @@
     $('#menu').replaceChildren(
       column(menuSection('Espresso bar'), menuSection('Signature'), menuSection('Cold')),
       column(menuSection('Teas'), menuSection('Bakery'), section('Add-ons', [
-        staticRow('Medium', '+.50'),
         staticRow('Large', '+1.00'),
         staticRow('Oat or almond milk', '+.75'),
         staticRow('Extra shot', '+1.00'),
         staticRow('Make it iced', 'free')
-      ], 'Drink prices are for a small.'))
+      ], 'Menu prices are for a regular.'))
     );
     $('#f-item').replaceChildren(...SECTIONS.map(sec => {
       const g = document.createElement('optgroup');
@@ -761,9 +763,7 @@
       const q = t.match(/\b(\d{1,2}|one|two|three|four|five|six|seven|eight|nine|ten|couple)\b/);
       const args = { item, quantity: q ? (NUMBERS[q[1]] ?? Number(q[1])) : 1 };
       if (byId[item].food) return args;
-      if (/\b(small|tall|short)\b/.test(t)) args.size = 'small';
-      else if (/\b(large|big|venti)\b/.test(t)) args.size = 'large';
-      else if (/\b(medium|regular|grande)\b/.test(t)) args.size = 'medium';
+      if (/\b(large|big|venti)\b/.test(t)) args.size = 'large';
       if (/\boat\b/.test(t)) args.milk = 'oat';
       else if (/\balmond\b/.test(t)) args.milk = 'almond';
       else if (/\b(skim|non-?fat)\b/.test(t)) args.milk = 'skim';
@@ -835,7 +835,7 @@
         case 'get_menu':
           return [
             ...Object.entries(out.sections).map(([sec, items]) => `${sec}: ${items.map(i => `${i.name} ${i.price}`).join(', ')}`),
-            'Medium +$0.50, large +$1.00. Oat or almond milk +$0.75. Extra shot +$1.00.'
+            'Prices are for a regular. Large +$1.00. Oat or almond milk +$0.75. Extra shot +$1.00.'
           ].join('\n');
         case 'view_order':
           return out.items.length
@@ -876,9 +876,9 @@
     const aiUsable = () => ['available', 'downloadable', 'downloading'].includes(ai.availability);
 
     const SYSTEM_PROMPT = `You are the ordering assistant for a café. Turn the customer's message into actions.
-Menu (id: name, small price, notes):
+Menu (id: name, regular price, notes):
 ${MENU.map(d => `- ${d.id}: ${d.name}, ${money(d.cents)}, ${d.sec}${d.food ? ', food' : ''}${d.icedOnly ? ', always iced' : ''}. ${d.desc}`).join('\n')}
-Drink sizes: small, medium (default), large. Milk: whole, skim, oat, almond, none. Food has no size or milk.
+Drink sizes: regular (default, the menu price) or large (+$1.00). Milk: whole, skim, oat, almond, none. Food has no size or milk.
 Actions:
 - add_to_order: item (menu id, required), size, milk, extraShot, iced, quantity
 - view_order, get_menu, clear_order: no fields
@@ -977,7 +977,7 @@ Rules:
     const HELP = `You can say things like:
   "A large oat latte with an extra shot"
   "A cortado and an almond croissant"
-  "Two small cold brews"
+  "Two cold brews and a large chai"
   "What's on the menu?" · "What's in my order?"
   "Remove the croissant" · "Cancel my order"
   "My name is Sam" · "Place my order"`;
@@ -1030,7 +1030,7 @@ Rules:
       } catch (err) {
         pending.remove();
         console.error(err);
-        return say('bot', 'The on-device AI had trouble with that. Try something simpler, like "a medium latte".', VIA_AI, true);
+        return say('bot', 'The on-device AI had trouble with that. Try something simpler, like "a latte".', VIA_AI, true);
       }
     }
 
