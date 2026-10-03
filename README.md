@@ -11,6 +11,17 @@ The page is a small product backlog dashboard. It exposes three tools:
 | `update_task_status` | **Imperative** | Changes a task's status. Validates input and returns `isError` results the model can act on. |
 | `delete_task` | **Imperative** | Removes an item. Marked `destructiveHint`, and an AI-planned delete asks the user to confirm first. |
 
+## Brew Bot: the coffee-ordering demo (`coffee.html`)
+
+This is a simpler, friendlier demo. Type *"a large oat latte with an extra shot"* and an agent orders it for you. Type *"place my order"* and you can watch it go from Received to Brewing to Ready.
+
+- **Ordering:** a declarative WebMCP form (`add_to_order`) and five imperative tools (`get_menu`, `view_order`, `remove_from_order`, `clear_order`, `place_order`).
+- **Confirmation:** `place_order` asks the customer to confirm before an outside agent can place an order.
+- **The chat box:** same rules-first, on-device-AI-second design as the dashboard.
+- **Hidden details:** technical details stay behind the **How it works** button. No server, no database: the order lives only in the browser tab.
+
+Live: `https://prachi050.github.io/agentic-product-management-dashboard/coffee.html`
+
 ## Command box
 
 You can also type commands into the page, such as `add Fix login bug high priority due friday #bug`, `start the pricing test` or `what's overdue?`. Type `help` to list them. Everything runs in the browser, with no server, database or API key.
