@@ -310,7 +310,7 @@
         <ul class="lines" id="lines"></ul>
         <div class="total"><span>Total</span><span id="total">$0.00</span></div>
         <div class="name-field">
-          <label for="order-name">Name for the order</label>
+          <label for="order-name">Pickup name</label>
           <input id="order-name" type="text" maxlength="30" autocomplete="given-name" placeholder="Your name">
         </div>
         <button class="btn primary" id="place-btn" type="button">Place order</button>
@@ -515,7 +515,7 @@
       timers.splice(0).forEach(clearTimeout);
       const t = $('#tracker');
       t.hidden = false;
-      $('#tracker-title').textContent = `Order #${placed.orderNumber} for ${placed.name} · ${placed.total}`;
+      $('#tracker-title').textContent = `Pickup for ${placed.name} · Order #${placed.orderNumber} · ${placed.total}`;
       const steps = ['received', 'brewing', 'ready'];
       const set = step => {
         const cur = steps.indexOf(step);
@@ -526,7 +526,7 @@
       };
       set('received');
       timers.push(setTimeout(() => set('brewing'), 2500));
-      timers.push(setTimeout(() => { set('ready'); log('ok', `Order #${placed.orderNumber} for ${placed.name} is ready for pickup.`); }, 8000));
+      timers.push(setTimeout(() => { set('ready'); log('ok', `Pickup for ${placed.name}: order #${placed.orderNumber} is ready.`); }, 8000));
     }
 
     function menuRow(d) {
@@ -843,7 +843,7 @@
             : 'Your order is empty.';
         case 'remove_from_order': return `Removed ${out.removed}. New total ${out.orderTotal}.`;
         case 'clear_order': return out.cleared ? 'Cleared your order.' : 'Your order was already empty.';
-        case 'place_order': return `Order #${out.orderNumber} for ${out.name} is in (${out.total}). It'll be ready in about ${out.readyInMinutes} minutes.`;
+        case 'place_order': return `Order #${out.orderNumber} is in (${out.total}). Pickup for ${out.name}, ready in about ${out.readyInMinutes} minutes.`;
       }
       return JSON.stringify(out);
     }
@@ -1009,7 +1009,7 @@ Rules:
         if (parsed?.error) return say('bot', parsed.error, VIA_RULES, true);
         if (parsed?.setName) {
           $('#order-name').value = parsed.setName;
-          return say('bot', `Thanks, ${parsed.setName}! I'll put your name on the order.`, VIA_RULES);
+          return say('bot', `Thanks, ${parsed.setName}! Your order will say "Pickup for ${parsed.setName}".`, VIA_RULES);
         }
         if (parsed) {
           const res = await runSteps(parsed.steps, 'rules');
