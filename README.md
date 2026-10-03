@@ -1,6 +1,6 @@
 # Brew Bot: an agent-powered café (WebMCP demo)
 
-**Live demo:** https://prachi050.github.io/agentic-product-management-dashboard/
+**Live demo:** https://prachi050.github.io/brew-bot-webmcp/
 
 Order from a café by asking in plain English. Type *"a large oat latte with an extra shot"* or *"a cortado and an almond croissant"* and an agent adds it to your order. Type *"place my order for Sam"* and you can watch it go from received to ready. The menu is a printed-style café board with an espresso bar, signature drinks, teas, cold drinks and a bakery. Tap any line to add it.
 
@@ -61,8 +61,8 @@ Open the live demo and type into the chat box, or tap any line on the menu board
 WebMCP needs a secure context. `http://localhost` counts; `file://` URLs and LAN IP addresses don't.
 
 ```bash
-git clone https://github.com/prachi050/agentic-product-management-dashboard.git
-cd agentic-product-management-dashboard
+git clone https://github.com/prachi050/brew-bot-webmcp.git
+cd brew-bot-webmcp
 python3 -m http.server 8000
 ```
 
