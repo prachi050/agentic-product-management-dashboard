@@ -971,7 +971,8 @@ Rules:
     }
 
     function setEngineNote(text) {
-      $('#engine-note').textContent = text ?? (aiUsable() ? 'On-device AI ready' : 'On-device AI not available');
+      const notes = { available: 'On-device AI ready', downloadable: 'On-device AI available (downloads on first use)', downloading: 'On-device AI downloading…' };
+      $('#engine-note').textContent = text ?? notes[ai.availability] ?? 'On-device AI not available';
     }
 
     async function detectAI() {
