@@ -3,28 +3,33 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Brew Bot</title>
-  <meta name="description" content="Order coffee by asking in plain English. An AI agent picks the drinks and places the order using WebMCP tools.">
+  <title>Brew Bot Café</title>
+  <meta name="description" content="Order coffee by asking in plain English. An AI agent picks from the menu and places the order using WebMCP tools.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,650&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #f8f3ec;
+      --bg: #f6f1ea;
       --surface: #ffffff;
       --surface-2: #f3ebe1;
-      --border: #e7dccd;
+      --border: #e5d9ca;
       --text: #2a1c13;
-      --muted: #8b7564;
+      --muted: #85705f;
       --accent: #6f4a32;
       --accent-ink: #fffaf4;
       --accent-soft: #f1e3d3;
-      --caramel: #c9874f;
+      --caramel: #b9783f;
       --ok: #3f8f5f;
       --danger: #b5483c;
-      --shadow: 0 1px 2px rgba(70, 45, 25, .06), 0 10px 30px rgba(70, 45, 25, .07);
+      --shadow: 0 1px 2px rgba(70, 45, 25, .06), 0 12px 32px rgba(70, 45, 25, .08);
       --radius: 18px;
-      --serif: "Fraunces", Georgia, "Times New Roman", serif;
+      --paper: #f8f2e6;
+      --ink: #2b1e14;
+      --ink-muted: #6d5a4a;
+      --leader: #ad9a84;
+      --display: "Cormorant Garamond", Georgia, "Times New Roman", serif;
+      --menu: "EB Garamond", Georgia, "Times New Roman", serif;
       --sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
       --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
       color-scheme: light;
@@ -34,7 +39,7 @@
         --bg: #17120e; --surface: #211a15; --surface-2: #2b221b; --border: #3b2f26;
         --text: #f4ebe1; --muted: #ab9886; --accent: #e3b07c; --accent-ink: #1d140d; --accent-soft: #3a2b1f;
         --caramel: #e3b07c; --ok: #7fd1a0; --danger: #f08a7e;
-        --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 10px 30px rgba(0, 0, 0, .25);
+        --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 12px 32px rgba(0, 0, 0, .3);
         color-scheme: dark;
       }
     }
@@ -44,17 +49,17 @@
     button, input, select { font: inherit; color: inherit; }
     code { font-family: var(--mono); font-size: 12.5px; }
 
-    .wrap { max-width: 1080px; margin: 0 auto; padding: 20px 16px 64px; }
+    .wrap { max-width: 1120px; margin: 0 auto; padding: 20px 16px 64px; }
 
     header.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-    .logo { display: flex; align-items: center; gap: 10px; font: 650 20px/1 var(--serif); }
-    .logo .cup { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); font-size: 18px; }
+    .logo { display: flex; align-items: center; gap: 10px; font: 700 22px/1 var(--display); letter-spacing: .01em; }
+    .logo .mark { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); }
     .link-btn { background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 7px 16px; color: var(--muted); cursor: pointer; font-size: 13px; font-weight: 500; }
     .link-btn:hover, .link-btn[aria-expanded="true"] { color: var(--text); border-color: var(--accent); }
 
-    .hero { text-align: center; padding: 56px 0 8px; }
-    .eyebrow { display: inline-block; font-size: 12px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--caramel); }
-    .hero h1 { margin: 10px 0 0; font: 650 clamp(34px, 7vw, 56px)/1.05 var(--serif); letter-spacing: -0.02em; }
+    .hero { text-align: center; padding: 52px 0 8px; }
+    .eyebrow { display: inline-block; font-size: 12px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--caramel); }
+    .hero h1 { margin: 8px 0 0; font: 600 clamp(38px, 7.5vw, 62px)/1.02 var(--display); letter-spacing: -0.01em; }
     .hero p { margin: 12px auto 0; max-width: 460px; color: var(--muted); font-size: 16px; }
 
     .ask { max-width: 640px; margin: 28px auto 0; }
@@ -62,12 +67,11 @@
     .ask form:focus-within { border-color: var(--accent); }
     .ask input { flex: 1; min-width: 0; background: transparent; border: 0; padding: 10px 18px; font-size: 16px; outline: none; }
     .ask input::placeholder { color: var(--muted); }
-    .ask input:focus { outline: none; }
     .btn { cursor: pointer; border: 1px solid var(--border); background: var(--surface); border-radius: 999px; padding: 10px 22px; font-weight: 600; transition: transform .12s, background .12s; }
     .btn:hover:not(:disabled) { transform: translateY(-1px); }
     .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
     .btn:disabled { opacity: .45; cursor: not-allowed; }
-    .btn:focus-visible, .chip:focus-visible, .link-btn:focus-visible { outline: 2px solid var(--caramel); outline-offset: 2px; }
+    .btn:focus-visible, .chip:focus-visible, .link-btn:focus-visible, .mi:focus-visible { outline: 2px solid var(--caramel); outline-offset: 2px; }
     .chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 16px; }
     .chip { cursor: pointer; background: var(--accent-soft); border: 1px solid transparent; border-radius: 999px; padding: 6px 14px; color: var(--accent); font-size: 13px; font-weight: 500; }
     .chip:hover { border-color: var(--accent); }
@@ -82,44 +86,74 @@
     .bubble .via { display: block; margin-top: 6px; font-size: 11.5px; color: var(--muted); }
 
     .steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin: 48px 0 40px; }
-    .step { display: flex; gap: 12px; align-items: flex-start; padding: 4px 0; }
+    .step { display: flex; gap: 12px; align-items: flex-start; }
     .step .n { flex: none; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font-weight: 600; font-size: 14px; }
     .step b { display: block; font-weight: 600; }
     .step span { color: var(--muted); font-size: 14px; }
 
     .grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 28px; align-items: start; }
-    h2 { font: 650 22px/1.2 var(--serif); margin: 0 0 16px; }
+    h2 { font: 600 26px/1.15 var(--display); margin: 0 0 16px; }
     .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); }
 
-    .menu { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
-    .item { display: flex; flex-direction: column; gap: 4px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 16px; transition: transform .15s, box-shadow .15s; }
-    .item:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
-    .item .icon { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 14px; font-size: 22px; margin-bottom: 8px; background: var(--tint, var(--accent-soft)); }
-    .item .name { font-weight: 600; }
-    .item .desc { color: var(--muted); font-size: 13px; flex: 1; }
-    .item .row { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
-    .item .price { font-weight: 600; font-variant-numeric: tabular-nums; }
-    .item .btn { padding: 6px 16px; font-size: 13px; background: var(--accent-soft); border-color: transparent; color: var(--accent); }
-    .item .btn:hover { background: var(--accent); color: var(--accent-ink); }
+    .frame {
+      padding: 10px; border-radius: 4px;
+      background: linear-gradient(135deg, #7d5d3a 0%, #c9a467 22%, #8f6c43 45%, #d4b47a 68%, #7a5935 100%);
+      box-shadow: 0 2px 4px rgba(40, 25, 10, .25), 0 18px 40px rgba(40, 25, 10, .18);
+    }
+    .board {
+      position: relative; color: var(--ink); font-family: var(--menu);
+      background:
+        radial-gradient(ellipse at 15% 8%, rgba(255, 255, 255, .7), transparent 45%),
+        radial-gradient(ellipse at 85% 95%, rgba(176, 140, 96, .14), transparent 55%),
+        radial-gradient(ellipse at 90% 10%, rgba(176, 140, 96, .08), transparent 40%),
+        var(--paper);
+      padding: 44px 44px 36px;
+      box-shadow: inset 0 0 0 8px var(--paper), inset 0 0 0 9px #c8b38f, inset 0 0 0 12px var(--paper), inset 0 0 0 13px #c8b38f, inset 0 0 40px rgba(120, 90, 50, .12);
+    }
+    .board-head { text-align: center; }
+    .board-head h3 { margin: 0; font: 600 44px/1 var(--display); font-variant: small-caps; letter-spacing: .06em; }
+    .board-head p { margin: 6px 0 0; font: italic 17px/1.3 var(--menu); color: var(--ink-muted); }
+    .rule { display: block; width: 220px; max-width: 70%; height: 12px; margin: 14px auto 26px; color: #a88f6c; }
+    .sections { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 52px; }
+    .sec { margin-bottom: 26px; }
+    .sec h4 { margin: 0 0 8px; font: italic 600 25px/1.1 var(--display); }
+    .sec .note { margin: -4px 0 8px; font: italic 14px/1.3 var(--menu); color: var(--ink-muted); }
+    .mi {
+      display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 6px; width: calc(100% + 12px);
+      background: none; border: 0; padding: 3px 6px; margin: 0 -6px; border-radius: 4px;
+      font: 17px/1.35 var(--menu); color: var(--ink); text-align: left; cursor: pointer;
+    }
+    .mi:hover { background: rgba(111, 74, 50, .08); }
+    .mi .nm { flex: 0 1 auto; max-width: 72%; }
+    .mi .ds { flex-basis: 100%; order: 10; margin-top: -2px; font-style: italic; font-size: 13.5px; color: var(--ink-muted); }
+    .mi .lead { flex: 1; min-width: 12px; border-bottom: 1.5px dotted var(--leader); transform: translateY(-5px); }
+    .mi .pr { flex: none; font-variant-numeric: lining-nums tabular-nums; }
+    .mi { position: relative; }
+    .mi .plus { position: absolute; right: -20px; top: 7px; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; font: 600 13px/1 var(--sans); color: #fff; background: #6f4a32; opacity: 0; transform: scale(.8); transition: opacity .12s, transform .12s; }
+    .mi:hover .plus, .mi:focus-visible .plus { opacity: 1; transform: none; }
+    .mi.static { cursor: default; }
+    .mi.static:hover { background: none; }
+    .board-foot { margin: 6px 0 0; text-align: center; font: italic 15px/1.4 var(--menu); color: var(--ink-muted); }
 
-    details.custom { margin-top: 16px; padding: 0; }
+    details.custom { margin-top: 20px; padding: 0; }
     details.custom summary { cursor: pointer; font-weight: 600; padding: 16px 20px; list-style: none; display: flex; justify-content: space-between; }
     details.custom summary::-webkit-details-marker { display: none; }
     details.custom summary::after { content: "+"; color: var(--muted); font-size: 18px; line-height: 1; }
     details.custom[open] summary::after { content: "–"; }
     details.custom form { padding: 0 20px 20px; }
-    .form-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+    .form-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 12px; }
     label { display: block; font-size: 12.5px; color: var(--muted); margin-bottom: 5px; }
-    select, input[type="number"] { width: 100%; padding: 9px 10px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; }
-    select:focus, input:focus { outline: 2px solid var(--caramel); outline-offset: 1px; }
+    select, input[type="number"], .name-field input { width: 100%; padding: 9px 10px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; }
+    select:focus, input[type="number"]:focus, .name-field input:focus { outline: 2px solid var(--caramel); outline-offset: 1px; }
     .checks { display: flex; gap: 20px; align-items: center; margin-top: 14px; flex-wrap: wrap; }
     .checks label { display: flex; align-items: center; gap: 7px; color: var(--text); margin: 0; font-size: 14px; }
     .checks input { accent-color: var(--accent); width: 16px; height: 16px; }
     .custom .btn.primary { margin-top: 16px; }
+    .hint { color: var(--muted); font-size: 13px; margin: 10px 0 0; }
     form:tool-form-active { outline: 2px dashed var(--caramel); outline-offset: 6px; border-radius: 8px; }
 
     .order { position: sticky; top: 16px; }
-    .order h2 { margin-bottom: 4px; }
+    .order h2 { margin-bottom: 2px; }
     .order .sub { color: var(--muted); font-size: 13px; margin: 0 0 14px; }
     .lines { list-style: none; margin: 0; padding: 14px 0 0; border-top: 1px dashed var(--border); display: grid; gap: 12px; }
     .lines li { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; font-size: 14px; }
@@ -127,8 +161,9 @@
     .lines .x { cursor: pointer; background: none; border: 0; color: var(--muted); font-size: 18px; line-height: 1; padding: 2px 6px; border-radius: 6px; }
     .lines .x:hover { color: var(--danger); background: var(--surface-2); }
     .lines li.empty { display: block; color: var(--muted); text-align: center; padding: 18px 0 6px; }
-    .total { display: flex; justify-content: space-between; border-top: 1px dashed var(--border); margin-top: 16px; padding-top: 14px; font: 650 18px/1 var(--serif); font-variant-numeric: tabular-nums; }
-    .order .btn.primary { width: 100%; margin-top: 16px; padding: 12px; }
+    .total { display: flex; justify-content: space-between; border-top: 1px dashed var(--border); margin-top: 16px; padding-top: 14px; font: 600 22px/1 var(--display); font-variant-numeric: lining-nums tabular-nums; }
+    .name-field { margin-top: 18px; }
+    .order .btn.primary { width: 100%; margin-top: 12px; padding: 12px; }
     li.flash { animation: flash 1.2s ease-out; border-radius: 8px; }
     @keyframes flash { from { background: var(--accent-soft); } to { background: transparent; } }
 
@@ -164,10 +199,9 @@
 
     footer { margin-top: 48px; color: var(--muted); font-size: 12.5px; text-align: center; }
 
-    @media (max-width: 860px) {
+    @media (max-width: 900px) {
       .grid, .dev-grid { grid-template-columns: minmax(0, 1fr); }
       .order { position: static; order: -1; }
-      .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
     @media (max-width: 560px) {
       .steps { grid-template-columns: minmax(0, 1fr); margin: 32px 0; }
@@ -175,34 +209,40 @@
       .ask input { flex-basis: 100%; }
       .ask .btn { flex: 1; }
       .hero { padding-top: 32px; }
-      .menu { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
-      .item { padding: 14px; }
-      .item .desc { display: none; }
+      .frame { padding: 6px; }
+      .board { padding: 34px 22px 26px; box-shadow: inset 0 0 0 6px var(--paper), inset 0 0 0 7px #c8b38f, inset 0 0 30px rgba(120, 90, 50, .12); }
+      .board-head h3 { font-size: 36px; }
+      .sections { grid-template-columns: minmax(0, 1fr); }
+      .mi { font-size: 16px; }
+      .form-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+      .form-grid > :first-child { grid-column: 1 / -1; }
     }
-    @media (prefers-color-scheme: dark) { .item .icon { background: var(--accent-soft); } }
   </style>
 </head>
 <body>
   <div class="wrap">
     <header class="top">
-      <div class="logo"><span class="cup" aria-hidden="true">☕</span> Brew Bot</div>
+      <div class="logo">
+        <span class="mark" aria-hidden="true"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9.5h11v3.5a5.5 5.5 0 0 1-11 0z"/><path d="M16 10.5h1.2a2.4 2.4 0 0 1 0 4.8H16"/><path d="M8.5 3.5c-.9 1 .9 1.7 0 2.7M12.5 3.5c-.9 1 .9 1.7 0 2.7"/><path d="M4 20.5h13"/></svg></span>
+        Brew Bot Café
+      </div>
       <button class="link-btn" id="dev-toggle" type="button" aria-expanded="false" aria-controls="dev">How it works</button>
     </header>
 
     <section class="hero">
-      <span class="eyebrow">An agent-powered café</span>
+      <span class="eyebrow">Order ahead · Pick up at the counter</span>
       <h1>What can I get you?</h1>
-      <p>Just ask in your own words. Our agent picks from the menu and puts in your order.</p>
+      <p>Just ask in your own words. Our ordering agent picks from the menu and puts in your order.</p>
       <div class="ask">
         <form id="ask-form" autocomplete="off">
-          <input id="ask" type="text" aria-label="Your coffee order" placeholder="A large oat latte with an extra shot">
+          <input id="ask" type="text" aria-label="Your order" placeholder="A large oat latte with an extra shot">
           <button class="btn primary" id="ask-btn" type="submit">Ask</button>
         </form>
         <div class="chips" id="examples">
           <button class="chip" type="button">A large oat latte with an extra shot</button>
-          <button class="chip" type="button">Two small black coffees</button>
+          <button class="chip" type="button">A cortado and an almond croissant</button>
           <button class="chip" type="button">What's on the menu?</button>
-          <button class="chip" type="button">Place my order</button>
+          <button class="chip" type="button">Place my order for Sam</button>
         </div>
       </div>
       <div class="chat" id="chat" aria-live="polite"></div>
@@ -210,54 +250,64 @@
 
     <section class="steps" aria-label="How ordering works">
       <div class="step"><span class="n">1</span><div><b>You ask</b><span>"Get me a large oat latte"</span></div></div>
-      <div class="step"><span class="n">2</span><div><b>The agent orders</b><span>It picks the drink, size and milk for you</span></div></div>
-      <div class="step"><span class="n">3</span><div><b>We brew it</b><span>Watch your order go from received to ready</span></div></div>
+      <div class="step"><span class="n">2</span><div><b>The agent orders</b><span>It picks the item, size and milk for you</span></div></div>
+      <div class="step"><span class="n">3</span><div><b>We make it</b><span>Watch your order go from received to ready</span></div></div>
     </section>
 
     <div class="grid">
-      <section aria-labelledby="menu-h">
-        <h2 id="menu-h">Menu</h2>
-        <div class="menu" id="menu"></div>
+      <section aria-label="Menu">
+        <div class="frame">
+          <div class="board">
+            <div class="board-head">
+              <h3>Brew Bot Café</h3>
+              <p>Coffee · Tea · Bakery</p>
+            </div>
+            <svg class="rule" viewBox="0 0 220 12" aria-hidden="true"><path d="M0 6h92M128 6h92" stroke="currentColor" stroke-width=".9"/><path d="M110 1l5 5-5 5-5-5z" fill="none" stroke="currentColor" stroke-width=".9"/><circle cx="99" cy="6" r="1.4" fill="currentColor"/><circle cx="121" cy="6" r="1.4" fill="currentColor"/></svg>
+            <div class="sections" id="menu"></div>
+            <p class="board-foot">Tap any item to add it, or just ask above.</p>
+          </div>
+        </div>
 
         <details class="custom card">
-          <summary>Customize a drink</summary>
-          <form id="drink-form"
+          <summary>Customize an item</summary>
+          <form id="item-form"
                 toolname="add_to_order"
-                tooldescription="Add a drink to the customer's coffee order. Returns the added line and the new order total."
+                tooldescription="Add one menu item to the customer's order. Size, milk, extra shot and iced apply to drinks only. Returns the added line and the new order total."
                 toolautosubmit>
             <div class="form-grid">
               <div>
-                <label for="f-drink">Drink</label>
-                <select id="f-drink" name="drink" required toolparamdescription="Menu drink id."></select>
+                <label for="f-item">Item</label>
+                <select id="f-item" name="item" required toolparamdescription="Menu item id."></select>
               </div>
               <div>
                 <label for="f-size">Size</label>
-                <select id="f-size" name="size" toolparamdescription="Cup size. Medium if not specified.">
+                <select id="f-size" name="size" toolparamdescription="Cup size for drinks. Medium if not specified.">
                   <option value="small">Small</option>
-                  <option value="medium" selected>Medium (+$0.50)</option>
-                  <option value="large">Large (+$1.00)</option>
+                  <option value="medium" selected>Medium</option>
+                  <option value="large">Large</option>
                 </select>
               </div>
               <div>
                 <label for="f-milk">Milk</label>
-                <select id="f-milk" name="milk" toolparamdescription="Milk choice. Leave empty for the drink's usual milk.">
+                <select id="f-milk" name="milk" toolparamdescription="Milk choice for drinks. Leave empty for the drink's usual milk.">
                   <option value="">Usual</option>
                   <option value="whole">Whole</option>
                   <option value="skim">Skim</option>
-                  <option value="oat">Oat (+$0.75)</option>
-                  <option value="almond">Almond (+$0.75)</option>
+                  <option value="oat">Oat</option>
+                  <option value="almond">Almond</option>
                   <option value="none">No milk</option>
                 </select>
               </div>
               <div>
-                <label for="f-qty">Quantity</label>
-                <input id="f-qty" name="quantity" type="number" min="1" max="10" value="1" toolparamdescription="How many of this drink, 1 to 10.">
+                <label for="f-qty">Qty</label>
+                <input id="f-qty" name="quantity" type="number" min="1" max="10" value="1" toolparamdescription="How many, 1 to 10.">
               </div>
             </div>
             <div class="checks">
-              <label><input type="checkbox" name="extraShot" value="true" toolparamdescription="Add an extra espresso shot (+$1.00)."> Extra shot (+$1.00)</label>
+              <label><input type="checkbox" name="extraShot" value="true" toolparamdescription="Add an extra espresso shot."> Extra shot</label>
               <label><input type="checkbox" name="iced" value="true" toolparamdescription="Serve over ice."> Iced</label>
             </div>
+            <p class="hint">Size, milk, extra shot and iced apply to drinks only.</p>
             <button class="btn primary" type="submit">Add to order</button>
           </form>
         </details>
@@ -265,15 +315,19 @@
 
       <aside class="order card" aria-labelledby="order-h">
         <h2 id="order-h">Your order</h2>
-        <p class="sub">Pickup at the counter</p>
+        <p class="sub">Pickup at the counter · ready in about 3 minutes</p>
         <ul class="lines" id="lines"></ul>
         <div class="total"><span>Total</span><span id="total">$0.00</span></div>
+        <div class="name-field">
+          <label for="order-name">Name for the order</label>
+          <input id="order-name" type="text" maxlength="30" autocomplete="given-name" placeholder="Your name">
+        </div>
         <button class="btn primary" id="place-btn" type="button">Place order</button>
         <div class="tracker" id="tracker" hidden>
           <strong id="tracker-title"></strong>
           <ol>
             <li data-step="received">Order received</li>
-            <li data-step="brewing">Brewing</li>
+            <li data-step="brewing">Being made</li>
             <li data-step="ready">Ready for pickup</li>
           </ol>
         </div>
@@ -315,16 +369,31 @@
   (() => {
     'use strict';
 
+    const SECTIONS = ['Espresso bar', 'Signature', 'Teas', 'Cold', 'Bakery'];
     const MENU = [
-      { id: 'espresso',     name: 'Espresso',     cents: 300, milk: false, desc: 'A rich double shot', icon: '☕', tint: '#efe2d3' },
-      { id: 'americano',    name: 'Americano',    cents: 350, milk: false, desc: 'Espresso and hot water. Our black coffee.', icon: '☕', tint: '#eadfd2' },
-      { id: 'latte',        name: 'Latte',        cents: 475, milk: true,  desc: 'Espresso with silky steamed milk', icon: '🥛', tint: '#f3e7da' },
-      { id: 'cappuccino',   name: 'Cappuccino',   cents: 450, milk: true,  desc: 'Espresso, milk and thick foam', icon: '☕', tint: '#f0e1cf' },
-      { id: 'flat_white',   name: 'Flat white',   cents: 450, milk: true,  desc: 'Strong and smooth, less foam', icon: '🤍', tint: '#efe8df' },
-      { id: 'mocha',        name: 'Mocha',        cents: 525, milk: true,  desc: 'A latte with dark chocolate', icon: '🍫', tint: '#ecdcd0' },
-      { id: 'cold_brew',    name: 'Cold brew',    cents: 425, milk: false, desc: 'Steeped 18 hours, always iced', icedOnly: true , icon: '🧊', tint: '#dfe9ee' },
-      { id: 'matcha_latte', name: 'Matcha latte', cents: 500, milk: true,  desc: 'Green tea whisked with milk', icon: '🍵', tint: '#e3edda' },
-      { id: 'chai_latte',   name: 'Chai latte',   cents: 475, milk: true,  desc: 'Spiced black tea and milk', icon: '🫖', tint: '#f2e2cf' }
+      { id: 'espresso',            sec: 'Espresso bar', name: 'Espresso',                    cents: 300, milk: 'none',  desc: 'A double shot of our house blend' },
+      { id: 'americano',           sec: 'Espresso bar', name: 'Americano',                   cents: 350, milk: 'none',  desc: 'Espresso and hot water, our black coffee' },
+      { id: 'macchiato',           sec: 'Espresso bar', name: 'Macchiato',                   cents: 375, milk: 'whole', desc: 'Espresso marked with a little foam' },
+      { id: 'cortado',             sec: 'Espresso bar', name: 'Cortado',                     cents: 425, milk: 'whole', desc: 'Equal parts espresso and warm milk' },
+      { id: 'cappuccino',          sec: 'Espresso bar', name: 'Cappuccino',                  cents: 450, milk: 'whole', desc: 'Espresso, milk and thick foam' },
+      { id: 'flat_white',          sec: 'Espresso bar', name: 'Flat white',                  cents: 450, milk: 'whole', desc: 'Strong and smooth, with thin foam' },
+      { id: 'latte',               sec: 'Espresso bar', name: 'Latte',                       cents: 475, milk: 'whole', desc: 'Espresso with silky steamed milk' },
+      { id: 'mocha',               sec: 'Espresso bar', name: 'Mocha',                       cents: 525, milk: 'whole', desc: 'A latte with dark chocolate' },
+      { id: 'honey_oat_latte',     sec: 'Signature',    name: 'Honey oat latte',             cents: 575, milk: 'oat',   desc: 'Wildflower honey, oat milk, cinnamon' },
+      { id: 'vanilla_latte',       sec: 'Signature',    name: 'Vanilla bean latte',          cents: 550, milk: 'whole', desc: 'House-made vanilla bean syrup' },
+      { id: 'brown_sugar_shaken',  sec: 'Signature',    name: 'Brown sugar shaken espresso', cents: 575, milk: 'oat',   desc: 'Shaken over ice with oat milk', icedOnly: true },
+      { id: 'chai_latte',          sec: 'Teas',         name: 'Chai latte',                  cents: 475, milk: 'whole', desc: 'Spiced black tea and milk' },
+      { id: 'matcha_latte',        sec: 'Teas',         name: 'Matcha latte',                cents: 500, milk: 'whole', desc: 'Ceremonial-grade matcha whisked with milk' },
+      { id: 'english_breakfast',   sec: 'Teas',         name: 'English breakfast',           cents: 325, milk: 'none',  desc: 'Bold black tea' },
+      { id: 'green_tea',           sec: 'Teas',         name: 'Sencha green',                cents: 325, milk: 'none',  desc: 'Light Japanese green tea' },
+      { id: 'chamomile',           sec: 'Teas',         name: 'Chamomile',                   cents: 325, milk: 'none',  desc: 'Caffeine-free herbal tea' },
+      { id: 'cold_brew',           sec: 'Cold',         name: 'Cold brew',                   cents: 425, milk: 'none',  desc: 'Steeped for 18 hours', icedOnly: true },
+      { id: 'iced_hibiscus',       sec: 'Cold',         name: 'Iced hibiscus tea',           cents: 375, milk: 'none',  desc: 'Tart, bright and caffeine-free', icedOnly: true },
+      { id: 'butter_croissant',    sec: 'Bakery',       name: 'Butter croissant',            cents: 375, food: true,    desc: 'Baked fresh every morning' },
+      { id: 'almond_croissant',    sec: 'Bakery',       name: 'Almond croissant',            cents: 450, food: true,    desc: 'Filled with almond cream' },
+      { id: 'chocolate_croissant', sec: 'Bakery',       name: 'Chocolate croissant',         cents: 425, food: true,    desc: 'Two bars of dark chocolate' },
+      { id: 'blueberry_scone',     sec: 'Bakery',       name: 'Blueberry scone',             cents: 395, food: true,    desc: 'With a lemon glaze' },
+      { id: 'banana_bread',        sec: 'Bakery',       name: 'Banana bread',                cents: 375, food: true,    desc: 'A thick slice, served warm' }
     ];
     const SIZES = { small: 0, medium: 50, large: 100 };
     const MILKS = { whole: 0, skim: 0, oat: 75, almond: 75, none: 0 };
@@ -342,17 +411,20 @@
     const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
     const orderTotal = () => order.reduce((n, l) => n + l.unitCents * l.quantity, 0);
 
-    function findDrink(value) {
+    function findItem(value) {
       const v = String(value ?? '').trim().toLowerCase().replace(/[\s-]+/g, '_');
       return byId[v] ?? MENU.find(d => d.name.toLowerCase().replace(/\s+/g, '_') === v);
     }
 
     function lineLabel(l) {
-      const d = byId[l.drink];
-      const milk = l.milk === 'oat' || l.milk === 'almond' || l.milk === 'skim' ? `${l.milk} ` : '';
+      const d = byId[l.item];
+      if (d.food) return d.name;
       const iced = l.iced && !d.icedOnly ? 'iced ' : '';
-      const extras = [l.extraShot && 'extra shot', d.milk && l.milk === 'none' && 'no milk'].filter(Boolean);
-      return cap(`${l.size} ${iced}${milk}${d.name.toLowerCase()}`) + (extras.length ? `, ${extras.join(', ')}` : '');
+      const extras = [
+        l.milk !== d.milk && (l.milk === 'none' ? 'no milk' : `${l.milk} milk`),
+        l.extraShot && 'extra shot'
+      ].filter(Boolean);
+      return cap(`${l.size} ${iced}${d.name.toLowerCase()}`) + (extras.length ? `, ${extras.join(', ')}` : '');
     }
 
     function publicLine(l) {
@@ -361,28 +433,34 @@
 
     function getMenu() {
       return {
-        drinks: MENU.map(d => ({ id: d.id, name: d.name, price: money(d.cents), description: d.desc, ...(d.icedOnly && { icedOnly: true }) })),
+        sections: Object.fromEntries(SECTIONS.map(sec => [sec, MENU.filter(d => d.sec === sec).map(d => ({
+          id: d.id, name: d.name, price: money(d.cents), description: d.desc,
+          ...(d.icedOnly && { icedOnly: true }), ...(d.food && { food: true })
+        }))])),
         sizes: { small: '+$0.00', medium: '+$0.50', large: '+$1.00' },
         milks: { whole: '+$0.00', skim: '+$0.00', oat: '+$0.75', almond: '+$0.75', none: '+$0.00' },
-        extraShot: money(EXTRA_SHOT)
+        extraShot: money(EXTRA_SHOT),
+        note: 'Bakery items have no size or milk options. Drink prices are for a small.'
       };
     }
 
-    function addToOrder({ drink, size = 'medium', milk, extraShot = false, iced = false, quantity = 1 } = {}) {
-      const d = findDrink(drink);
-      if (!d) throw new ToolError(`"${drink}" isn't on the menu. Try one of: ${MENU.map(m => m.id).join(', ')}.`);
-      size = String(size || 'medium').toLowerCase();
-      if (!(size in SIZES)) throw new ToolError('size must be small, medium or large.');
-      milk = milk ? String(milk).toLowerCase() : (d.milk ? 'whole' : 'none');
-      if (!(milk in MILKS)) throw new ToolError('milk must be whole, skim, oat, almond or none.');
+    function addToOrder({ item, size = 'medium', milk, extraShot = false, iced = false, quantity = 1 } = {}) {
+      const d = findItem(item);
+      if (!d) throw new ToolError(`"${item}" isn't on the menu. Use get_menu to see the item ids.`);
       quantity = Number(quantity) || 1;
       if (!Number.isInteger(quantity) || quantity < 1 || quantity > 10) throw new ToolError('quantity must be a whole number from 1 to 10.');
-      const toBool = v => v === true || v === 'true' || v === 'on';
-      const line = {
-        line: nextLine++, drink: d.id, size, milk, quantity,
-        extraShot: toBool(extraShot), iced: d.icedOnly || toBool(iced)
-      };
-      line.unitCents = d.cents + SIZES[size] + MILKS[milk] + (line.extraShot ? EXTRA_SHOT : 0);
+      let line;
+      if (d.food) {
+        line = { line: nextLine++, item: d.id, quantity, unitCents: d.cents };
+      } else {
+        size = String(size || 'medium').toLowerCase();
+        if (!(size in SIZES)) throw new ToolError('size must be small, medium or large.');
+        milk = milk ? String(milk).toLowerCase() : d.milk;
+        if (!(milk in MILKS)) throw new ToolError('milk must be whole, skim, oat, almond or none.');
+        const toBool = v => v === true || v === 'true' || v === 'on';
+        line = { line: nextLine++, item: d.id, size, milk, quantity, extraShot: toBool(extraShot), iced: d.icedOnly || toBool(iced) };
+        line.unitCents = d.cents + SIZES[size] + (milk !== d.milk ? MILKS[milk] : 0) + (line.extraShot ? EXTRA_SHOT : 0);
+      }
       order.push(line);
       render(line.line);
       return { added: publicLine(line), orderTotal: money(orderTotal()) };
@@ -407,9 +485,11 @@
       return { cleared: count };
     }
 
-    function placeOrder() {
-      if (!order.length) throw new ToolError('The order is empty. Add a drink first.');
-      const placed = { orderNumber: nextOrderNo++, items: order.map(publicLine), total: money(orderTotal()), readyInMinutes: 3 };
+    function placeOrder({ name } = {}) {
+      if (!order.length) throw new ToolError('The order is empty. Add something first.');
+      const who = String(name ?? '').trim() || $('#order-name').value.trim() || 'Guest';
+      if (who.length > 30) throw new ToolError('name must be 30 characters or fewer.');
+      const placed = { orderNumber: nextOrderNo++, name: who, items: order.map(publicLine), total: money(orderTotal()), readyInMinutes: 3 };
       order.length = 0;
       render();
       track(placed);
@@ -435,7 +515,7 @@
         li.append(name, price, x);
         return li;
       }));
-      if (!order.length) ul.innerHTML = '<li class="empty">Nothing yet. Ask for a drink or tap Add.</li>';
+      if (!order.length) ul.innerHTML = '<li class="empty">Nothing yet. Ask for something or tap the menu.</li>';
       $('#total').textContent = money(orderTotal());
       $('#place-btn').disabled = !order.length;
     }
@@ -444,33 +524,80 @@
       timers.splice(0).forEach(clearTimeout);
       const t = $('#tracker');
       t.hidden = false;
-      $('#tracker-title').textContent = `Order #${placed.orderNumber} · ${placed.total}`;
+      $('#tracker-title').textContent = `Order #${placed.orderNumber} for ${placed.name} · ${placed.total}`;
+      const steps = ['received', 'brewing', 'ready'];
       const set = step => {
-        const order = ['received', 'brewing', 'ready'];
+        const cur = steps.indexOf(step);
         t.querySelectorAll('li').forEach(li => {
-          const i = order.indexOf(li.dataset.step), cur = order.indexOf(step);
-          li.className = i < cur || step === 'ready' && i === cur ? 'done' : i === cur ? 'now' : '';
+          const i = steps.indexOf(li.dataset.step);
+          li.className = i < cur || (step === 'ready' && i === cur) ? 'done' : i === cur ? 'now' : '';
         });
       };
       set('received');
       timers.push(setTimeout(() => set('brewing'), 2500));
-      timers.push(setTimeout(() => { set('ready'); log('ok', `Order #${placed.orderNumber} is ready for pickup.`); }, 8000));
+      timers.push(setTimeout(() => { set('ready'); log('ok', `Order #${placed.orderNumber} for ${placed.name} is ready for pickup.`); }, 8000));
     }
 
-    $('#menu').replaceChildren(...MENU.map(d => {
-      const el = document.createElement('div');
-      el.className = 'item';
-      el.style.setProperty('--tint', d.tint);
-      el.innerHTML = `<div class="icon" aria-hidden="true">${d.icon}</div><div class="name"></div><div class="desc"></div>
-        <div class="row"><span class="price">${money(d.cents)}</span><button class="btn" type="button">Add</button></div>`;
-      el.querySelector('.name').textContent = d.name;
-      el.querySelector('.desc').textContent = d.desc;
-      el.querySelector('button').setAttribute('aria-label', `Add a medium ${d.name}`);
-      el.querySelector('button').addEventListener('click', () => COMMAND_TOOLS.add_to_order({ drink: d.id }));
-      return el;
+    function menuRow(d) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'mi';
+      b.innerHTML = '<span class="nm"></span><span class="lead" aria-hidden="true"></span><span class="pr"></span><span class="plus" aria-hidden="true">+</span>';
+      b.querySelector('.nm').textContent = d.name;
+      if (d.sec === 'Signature') {
+        const small = document.createElement('small');
+        small.className = 'ds';
+        small.textContent = d.desc;
+        b.append(small);
+      }
+      b.querySelector('.pr').textContent = money(d.cents).replace('$', '');
+      b.title = d.desc;
+      b.setAttribute('aria-label', `Add ${d.food ? 'a' : 'a medium'} ${d.name}, ${money(d.cents)}`);
+      b.addEventListener('click', () => COMMAND_TOOLS.add_to_order({ item: d.id }));
+      return b;
+    }
+    function staticRow(label, price) {
+      const r = document.createElement('div');
+      r.className = 'mi static';
+      r.innerHTML = '<span class="nm"></span><span class="lead" aria-hidden="true"></span><span class="pr"></span>';
+      r.querySelector('.nm').textContent = label;
+      r.querySelector('.pr').textContent = price;
+      return r;
+    }
+    function section(title, rows, note) {
+      const s = document.createElement('div');
+      s.className = 'sec';
+      const h = document.createElement('h4');
+      h.textContent = title;
+      s.append(h);
+      if (note) {
+        const n = document.createElement('p');
+        n.className = 'note';
+        n.textContent = note;
+        s.append(n);
+      }
+      s.append(...rows);
+      return s;
+    }
+    const menuSection = sec => section(sec, MENU.filter(d => d.sec === sec).map(menuRow));
+    const column = (...secs) => { const c = document.createElement('div'); c.append(...secs); return c; };
+    $('#menu').replaceChildren(
+      column(menuSection('Espresso bar'), menuSection('Signature'), menuSection('Cold')),
+      column(menuSection('Teas'), menuSection('Bakery'), section('Add-ons', [
+        staticRow('Medium', '+.50'),
+        staticRow('Large', '+1.00'),
+        staticRow('Oat or almond milk', '+.75'),
+        staticRow('Extra shot', '+1.00'),
+        staticRow('Make it iced', 'free')
+      ], 'Drink prices are for a small.'))
+    );
+    $('#f-item').replaceChildren(...SECTIONS.map(sec => {
+      const g = document.createElement('optgroup');
+      g.label = sec;
+      g.append(...MENU.filter(d => d.sec === sec).map(d => new Option(`${d.name} · ${money(d.cents)}`, d.id)));
+      return g;
     }));
-    $('#f-drink').replaceChildren(...MENU.map(d => new Option(`${d.name} · ${money(d.cents)}`, d.id)));
-    $('#f-drink').value = 'latte';
+    $('#f-item').value = 'latte';
 
     const logEl = $('#log');
     function log(kind, msg) {
@@ -510,7 +637,7 @@
     const TOOLS = [
       {
         name: 'get_menu',
-        description: 'List the drinks, sizes, milk options and prices.',
+        description: 'List the menu by section with item ids and prices, plus size, milk and extra-shot options.',
         inputSchema: { type: 'object', properties: {}, additionalProperties: false },
         annotations: { readOnlyHint: true },
         execute: guarded('get_menu', getMenu)
@@ -543,8 +670,12 @@
       {
         name: 'place_order',
         description: 'Submit the order for the customer. The customer is asked to confirm before it is placed.',
-        inputSchema: { type: 'object', properties: {}, additionalProperties: false },
-        execute: guarded('place_order', async (_, client) => { await confirmPlace(client); return placeOrder(); })
+        inputSchema: {
+          type: 'object',
+          properties: { name: { type: 'string', maxLength: 30, description: "Customer's name for the order. Optional." } },
+          additionalProperties: false
+        },
+        execute: guarded('place_order', async (input, client) => { await confirmPlace(client); return placeOrder(input); })
       }
     ];
 
@@ -559,22 +690,21 @@
 
     $('#place-btn').addEventListener('click', () => COMMAND_TOOLS.place_order());
 
-    const drinkForm = $('#drink-form');
-    drinkForm.addEventListener('submit', async e => {
+    const itemForm = $('#item-form');
+    itemForm.addEventListener('submit', async e => {
       e.preventDefault();
-      const fd = Object.fromEntries(new FormData(drinkForm));
-      const res = await COMMAND_TOOLS.add_to_order(fd);
+      const res = await COMMAND_TOOLS.add_to_order(Object.fromEntries(new FormData(itemForm)));
       if (e.agentInvoked && typeof e.respondWith === 'function') e.respondWith(Promise.resolve(res));
       if (!res.isError) {
-        drinkForm.reset();
-        $('#f-drink').value = 'latte';
+        itemForm.reset();
+        $('#f-item').value = 'latte';
       }
     });
     window.addEventListener('toolactivated', e => log('agent', `agent is filling the "${e.toolName ?? 'add_to_order'}" form`));
     window.addEventListener('toolcancel', e => log('agent', `agent cancelled the "${e.toolName ?? 'add_to_order'}" form`));
 
     $('#tool-list').replaceChildren(...[
-      { name: 'add_to_order', description: 'Add a drink (from the "Customize a drink" form)' },
+      { name: 'add_to_order', description: 'Add an item (from the "Customize an item" form)' },
       ...TOOLS
     ].map(t => {
       const li = document.createElement('li');
@@ -621,18 +751,25 @@
     }
 
     const NUMBERS = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, couple: 2 };
-    const DRINK_WORDS = [
-      [/flat\s*whites?/, 'flat_white'], [/cold\s*brews?/, 'cold_brew'], [/matcha/, 'matcha_latte'],
-      [/chai/, 'chai_latte'], [/mochas?/, 'mocha'], [/cap+uc+inos?/, 'cappuccino'], [/lattes?/, 'latte'],
-      [/americanos?/, 'americano'], [/espressos?/, 'espresso'], [/coffees?|drip/, 'americano']
+    const ITEM_WORDS = [
+      [/honey\s*oat/, 'honey_oat_latte'], [/vanilla/, 'vanilla_latte'], [/brown\s*sugar|shaken/, 'brown_sugar_shaken'],
+      [/hibiscus/, 'iced_hibiscus'], [/chamomile/, 'chamomile'], [/english\s*breakfast|black\s*tea/, 'english_breakfast'],
+      [/green\s*tea|sencha/, 'green_tea'], [/chai/, 'chai_latte'], [/matcha/, 'matcha_latte'], [/cold\s*brews?/, 'cold_brew'],
+      [/flat\s*whites?/, 'flat_white'], [/macchiatos?/, 'macchiato'], [/cortados?/, 'cortado'], [/cap+uc+inos?/, 'cappuccino'],
+      [/mochas?/, 'mocha'], [/almond\s*croissants?/, 'almond_croissant'],
+      [/chocolate\s*croissants?|pain\s*au\s*chocolat/, 'chocolate_croissant'], [/croissants?/, 'butter_croissant'],
+      [/scones?/, 'blueberry_scone'], [/banana\s*bread/, 'banana_bread'], [/lattes?/, 'latte'],
+      [/americanos?/, 'americano'], [/espressos?/, 'espresso'], [/\bteas?\b/, 'english_breakfast'], [/coffees?|drip/, 'americano']
     ];
-    const drinkIn = t => DRINK_WORDS.find(([re]) => re.test(t))?.[1];
+    const itemIn = t => ITEM_WORDS.find(([re]) => re.test(t))?.[1];
+    const itemWord = t => t.match(ITEM_WORDS.find(([re]) => re.test(t))?.[0] ?? /$^/)?.[0].replace(/s$/, '');
 
     function parseItem(t) {
-      const drink = drinkIn(t);
-      if (!drink) return null;
+      const item = itemIn(t);
+      if (!item) return null;
       const q = t.match(/\b(\d{1,2}|one|two|three|four|five|six|seven|eight|nine|ten|couple)\b/);
-      const args = { drink, quantity: q ? (NUMBERS[q[1]] ?? Number(q[1])) : 1 };
+      const args = { item, quantity: q ? (NUMBERS[q[1]] ?? Number(q[1])) : 1 };
+      if (byId[item].food) return args;
       if (/\b(small|tall|short)\b/.test(t)) args.size = 'small';
       else if (/\b(large|big|venti)\b/.test(t)) args.size = 'large';
       else if (/\b(medium|regular|grande)\b/.test(t)) args.size = 'medium';
@@ -660,32 +797,43 @@
       return items.map(i => i.args);
     }
 
+    const NOT_NAMES = /^(me|us|here|now|pickup|later|today|takeaway|there|you)$/i;
+    function placeArgs(input) {
+      const m = input.trim().replace(/[.!?]+$/, '').match(/\bfor\s+([A-Za-z][A-Za-z'-]{1,29})$/);
+      return m && !NOT_NAMES.test(m[1]) ? { name: cap(m[1]) } : {};
+    }
+
     function lineRef(t) {
       const m = t.match(/(?:#|line\s*|item\s*|number\s*)(\d+)/);
       if (m) return Number(m[1]);
-      const drink = drinkIn(t);
-      const hit = drink && [...order].reverse().find(l => l.drink === drink);
+      const item = itemIn(t);
+      if (!item) return null;
+      const word = itemWord(t);
+      const recent = [...order].reverse();
+      const hit = recent.find(l => l.item === item) ?? recent.find(l => byId[l.item].name.toLowerCase().includes(word));
       return hit ? hit.line : null;
     }
 
     function parseRules(input) {
       const t = input.toLowerCase().replace(/[’']/g, "'").replace(/[.!?]+$/, '').trim();
       if (/^(help|\?|what can (you|i) (do|say))/.test(t)) return { help: true };
-      if (/\b(remove|delete|take off|drop|cancel|no more)\b/.test(t) && (lineRef(t) || /#|line|item/.test(t) || drinkIn(t))) {
+      const named = t.match(/^(?:my name is|i'm|i am|name is|call me)\s+([a-z][a-z'-]{1,29})$/);
+      if (named && !itemIn(t)) return { setName: cap(named[1]) };
+      if (/\b(remove|delete|take off|drop|cancel|no more)\b/.test(t) && (lineRef(t) || /#|line|item/.test(t) || itemIn(t))) {
         const line = lineRef(t);
-        if (!line) return { error: "I couldn't find that drink in your order." };
+        if (!line) return { error: "I couldn't find that in your order." };
         return { steps: [{ tool: 'remove_from_order', args: { line } }] };
       }
       if (/\b(cancel|clear|start over|empty|never ?mind|reset|scratch that)\b/.test(t)) return { steps: [{ tool: 'clear_order', args: {} }] };
       if (/\b(menu|what do you (have|serve|sell)|what drinks|options|prices?)\b/.test(t)) return { steps: [{ tool: 'get_menu', args: {} }] };
-      const items = drinkIn(t) ? parseOrderItems(t) : [];
+      const items = itemIn(t) ? parseOrderItems(t) : [];
       const wantsPlace = /\b(place|checkout|check out|pay|submit|confirm|order it|send it|go ahead|that'?s (it|all))\b/.test(t) || /^(yes|yep|yeah|sure|ok|okay|done)\b/.test(t);
       if (items.length) {
         const steps = items.map(args => ({ tool: 'add_to_order', args }));
-        if (wantsPlace && /\b(and|then)\s+(place|order|checkout|check out|pay|submit)/.test(t)) steps.push({ tool: 'place_order', args: {} });
+        if (wantsPlace && /\b(and|then)\s+(place|order|checkout|check out|pay|submit)/.test(t)) steps.push({ tool: 'place_order', args: placeArgs(input) });
         return { steps };
       }
-      if (wantsPlace) return { steps: [{ tool: 'place_order', args: {} }] };
+      if (wantsPlace) return { steps: [{ tool: 'place_order', args: placeArgs(input) }] };
       if (/\b(my order|my cart|in my|what'?s in|show|total|how much|what did i)\b/.test(t)) return { steps: [{ tool: 'view_order', args: {} }] };
       return null;
     }
@@ -694,16 +842,17 @@
       switch (tool) {
         case 'add_to_order': return `Added ${out.added.quantity} × ${out.added.item} (${out.added.price}).`;
         case 'get_menu':
-          return ['Here\'s the menu:',
-            ...out.drinks.map(d => `  ${d.name} · ${d.price}`),
-            'Medium +$0.50, large +$1.00. Oat or almond milk +$0.75. Extra shot +$1.00.'].join('\n');
+          return [
+            ...Object.entries(out.sections).map(([sec, items]) => `${sec}: ${items.map(i => `${i.name} ${i.price}`).join(', ')}`),
+            'Medium +$0.50, large +$1.00. Oat or almond milk +$0.75. Extra shot +$1.00.'
+          ].join('\n');
         case 'view_order':
           return out.items.length
             ? ['Your order:', ...out.items.map(i => `  ${i.quantity} × ${i.item} · ${i.price}`), `Total ${out.total}`].join('\n')
             : 'Your order is empty.';
         case 'remove_from_order': return `Removed ${out.removed}. New total ${out.orderTotal}.`;
         case 'clear_order': return out.cleared ? 'Cleared your order.' : 'Your order was already empty.';
-        case 'place_order': return `Order #${out.orderNumber} placed (${out.total}). It'll be ready in about ${out.readyInMinutes} minutes.`;
+        case 'place_order': return `Order #${out.orderNumber} for ${out.name} is in (${out.total}). It'll be ready in about ${out.readyInMinutes} minutes.`;
       }
       return JSON.stringify(out);
     }
@@ -714,7 +863,7 @@
       for (const step of steps) {
         if (step.tool === 'place_order' && engine === 'ai' && order.length &&
             !confirm(`Place your order for ${money(orderTotal())}?`)) {
-          lines.push('Okay, I didn\'t place it.');
+          lines.push("Okay, I didn't place it.");
           continue;
         }
         const res = await COMMAND_TOOLS[step.tool](step.args);
@@ -735,17 +884,19 @@
     const ai = { availability: 'unavailable', session: null };
     const aiUsable = () => ['available', 'downloadable', 'downloading'].includes(ai.availability);
 
-    const SYSTEM_PROMPT = `You are the ordering assistant for a coffee shop. Turn the customer's message into actions.
-Menu: ${MENU.map(d => `${d.id} (${d.name}, ${money(d.cents)}${d.icedOnly ? ', always iced' : ''}): ${d.desc}`).join('; ')}.
-Sizes: small, medium (default), large. Milk: whole, skim, oat, almond, none.
+    const SYSTEM_PROMPT = `You are the ordering assistant for a café. Turn the customer's message into actions.
+Menu (id: name, small price, notes):
+${MENU.map(d => `- ${d.id}: ${d.name}, ${money(d.cents)}, ${d.sec}${d.food ? ', food' : ''}${d.icedOnly ? ', always iced' : ''}. ${d.desc}`).join('\n')}
+Drink sizes: small, medium (default), large. Milk: whole, skim, oat, almond, none. Food has no size or milk.
 Actions:
-- add_to_order: drink (menu id, required), size, milk, extraShot, iced, quantity
-- view_order, get_menu, clear_order, place_order: no fields
+- add_to_order: item (menu id, required), size, milk, extraShot, iced, quantity
+- view_order, get_menu, clear_order: no fields
 - remove_from_order: line (the line number from the current order)
+- place_order: name (optional, the customer's name)
 Rules:
-- Only use drinks from the menu. If the customer is vague ("something sweet and cold"), choose a fitting drink and say why in reply.
+- Only use items from the menu. If the customer is vague ("something sweet and cold"), choose a fitting item and say why in reply.
 - Only add place_order if the customer clearly asks to place, submit or check out.
-- If the message is not about ordering coffee, return no steps and answer briefly in reply.
+- If the message is not about ordering, return no steps and answer briefly in reply.
 - reply is one short, friendly sentence.`;
 
     const PLAN_SCHEMA = {
@@ -753,18 +904,19 @@ Rules:
       properties: {
         steps: {
           type: 'array',
-          maxItems: 6,
+          maxItems: 8,
           items: {
             type: 'object',
             properties: {
               tool: { type: 'string', enum: Object.keys(COMMAND_TOOLS) },
-              drink: { type: 'string', enum: MENU.map(d => d.id) },
+              item: { type: 'string', enum: MENU.map(d => d.id) },
               size: { type: 'string', enum: Object.keys(SIZES) },
               milk: { type: 'string', enum: Object.keys(MILKS) },
               extraShot: { type: 'boolean' },
               iced: { type: 'boolean' },
               quantity: { type: 'integer', minimum: 1, maximum: 10 },
-              line: { type: 'integer' }
+              line: { type: 'integer' },
+              name: { type: 'string' }
             },
             required: ['tool']
           }
@@ -776,11 +928,12 @@ Rules:
 
     function toStep(st) {
       if (st.tool === 'add_to_order') {
-        const args = { drink: st.drink };
+        const args = { item: st.item };
         for (const k of ['size', 'milk', 'extraShot', 'iced', 'quantity']) if (st[k] !== undefined) args[k] = st[k];
         return { tool: st.tool, args };
       }
       if (st.tool === 'remove_from_order') return { tool: st.tool, args: { line: st.line } };
+      if (st.tool === 'place_order') return { tool: st.tool, args: st.name ? { name: String(st.name).slice(0, 30) } : {} };
       return { tool: st.tool, args: {} };
     }
 
@@ -806,8 +959,8 @@ Rules:
         const raw = await s.prompt(`Current order:\n${current}\n\nCustomer: ${input}`, { responseConstraint: PLAN_SCHEMA });
         const plan = JSON.parse(raw);
         const steps = (Array.isArray(plan.steps) ? plan.steps : [])
-          .filter(st => st && st.tool in COMMAND_TOOLS && (st.tool !== 'add_to_order' || byId[st.drink]))
-          .slice(0, 6)
+          .filter(st => st && st.tool in COMMAND_TOOLS && (st.tool !== 'add_to_order' || byId[st.item]))
+          .slice(0, 8)
           .map(toStep);
         return { steps, reply: String(plan.reply ?? '').trim() };
       } finally {
@@ -832,10 +985,11 @@ Rules:
 
     const HELP = `You can say things like:
   "A large oat latte with an extra shot"
-  "Two small black coffees and an iced mocha"
+  "A cortado and an almond croissant"
+  "Two small cold brews"
   "What's on the menu?" · "What's in my order?"
-  "Remove the mocha" · "Cancel my order"
-  "Place my order"`;
+  "Remove the croissant" · "Cancel my order"
+  "My name is Sam" · "Place my order"`;
 
     const chat = $('#chat');
     function say(kind, text, via, isErr) {
@@ -862,12 +1016,16 @@ Rules:
         const parsed = parseRules(input);
         if (parsed?.help) return say('bot', HELP, VIA_RULES);
         if (parsed?.error) return say('bot', parsed.error, VIA_RULES, true);
+        if (parsed?.setName) {
+          $('#order-name').value = parsed.setName;
+          return say('bot', `Thanks, ${parsed.setName}! I'll put your name on the order.`, VIA_RULES);
+        }
         if (parsed) {
           const res = await runSteps(parsed.steps, 'rules');
           return say('bot', res.text, VIA_RULES, res.failed);
         }
         if (mode === 'rules' || !aiUsable()) {
-          return say('bot', `Sorry, I didn't catch a drink in that. Try "a large oat latte", or say "help".`, null, true);
+          return say('bot', `Sorry, I didn't catch an item in that. Try "a large oat latte", or say "help".`, null, true);
         }
       }
       if (!aiUsable()) return say('bot', "The on-device AI isn't available in this browser. Switch the engine back to Auto.", null, true);

@@ -2,7 +2,7 @@
 
 **Live demo:** https://prachi050.github.io/agentic-product-management-dashboard/
 
-Order coffee by asking in plain English. Type *"a large oat latte with an extra shot"* and an agent adds it to your order. Type *"place my order"* and you can watch it go from Received to Brewing to Ready.
+Order from a café by asking in plain English. Type *"a large oat latte with an extra shot"* or *"a cortado and an almond croissant"* and an agent adds it to your order. Type *"place my order for Sam"* and you can watch it go from received to ready. The menu is a printed-style café board with an espresso bar, signature drinks, teas, cold drinks and a bakery. Tap any line to add it.
 
 This is a proof of concept for **WebMCP**, the draft web standard from the W3C Web Machine Learning Community Group. WebMCP lets a website hand AI agents in the browser a list of actions it supports, so an agent calls those actions directly instead of scraping the page or simulating clicks. Everything is plain HTML, CSS and JavaScript in one file (`index.html`), with no build step, server or database.
 
@@ -10,18 +10,18 @@ This is a proof of concept for **WebMCP**, the draft web standard from the W3C W
 
 | Tool | API | What it does |
 |---|---|---|
-| `add_to_order` | **Declarative**: `toolname` / `tooldescription` / `toolautosubmit` on the "Customize a drink" `<form>` | The browser builds the input schema from the form fields. When an agent submits, the handler returns a structured result with `SubmitEvent.respondWith()`. |
-| `get_menu` | **Imperative**: `document.modelContext.registerTool()` | Drinks, sizes, milk options and prices. Marked `readOnlyHint`. |
+| `add_to_order` | **Declarative**: `toolname` / `tooldescription` / `toolautosubmit` on the "Customize an item" `<form>` | The browser builds the input schema from the form fields. When an agent submits, the handler returns a structured result with `SubmitEvent.respondWith()`. |
+| `get_menu` | **Imperative**: `document.modelContext.registerTool()` | The menu by section, with item ids, prices, sizes and milk options. Marked `readOnlyHint`. |
 | `view_order` | **Imperative** | What's in the order and the total. Marked `readOnlyHint`. |
 | `remove_from_order` | **Imperative** | Removes one line from the order. |
 | `clear_order` | **Imperative** | Empties the order. Marked `destructiveHint`. |
-| `place_order` | **Imperative** | Places the order, but only after the customer confirms. |
+| `place_order` | **Imperative** | Places the order under an optional customer name, but only after the customer confirms. |
 
 ## The chat box
 
 The "What can I get you?" box is the page's own small agent, and it uses the same tools.
 
-- **Rules first.** Common requests (*"two small black coffees and an iced mocha"*, *"remove the mocha"*, *"place my order"*) are understood instantly by a rule-based parser that works in every browser.
+- **Rules first.** Common requests (*"two small cold brews and a honey oat latte"*, *"remove the croissant"*, *"my name is Sam"*, *"place my order"*) are understood instantly by a rule-based parser that works in every browser.
 - **On-device AI second.** Free-form requests (*"something sweet and cold"*) go to Chrome's built-in model, Gemini Nano, through the Prompt API, when it's available. The model sees the menu and the current order. It returns a JSON plan constrained by a schema (`responseConstraint`), and the plan can only name the tools above.
 - **Same tools everywhere.** The chat box, the menu's **Add** buttons and outside AI agents all call the same tool handlers, so every action shows up in the activity log.
 
@@ -31,30 +31,31 @@ The "What can I get you?" box is the page's own small agent, and it uses the sam
 - **Progressive enhancement.** The page works in any browser. WebMCP tools are registered only when the browser supports them.
 - **Feature detection.** The page uses `document.modelContext` first. It falls back to `navigator.modelContext`, which early previews used and Chrome 150 deprecated. If neither exists, or the page isn't in a secure context, the chat and menu keep working without agent mode.
 - **Confirmation before risky actions.** `place_order` asks the customer before an outside agent can submit. It uses `client.requestUserInteraction()` when the browser provides it, and `confirm()` otherwise. Orders planned by the on-device model are confirmed the same way.
-- **Error contract.** Every tool is wrapped. Bad input becomes `{ isError: true, content: [...] }` with a message the agent can recover from, such as *"'unicorn' isn't on the menu"*. Unexpected exceptions are logged and not exposed to the model.
+- **Error contract.** Every tool is wrapped. Bad input becomes `{ isError: true, content: [...] }` with a message the agent can recover from, such as *"'unicorn' isn't on the menu. Use get_menu to see the item ids."*. Unexpected exceptions are logged and not exposed to the model.
 - **Lifecycle.** Tools are registered with an `AbortSignal` and removed on `pagehide`, with `unregisterTool()` as a fallback.
 - **Safety.** Text typed by users or produced by agents is written with `textContent`, never `innerHTML`.
 
 ## Trying it
 
 ### In any browser
-Open the live demo and type into the chat box, or tap **Add** on a menu item. Try:
+Open the live demo and type into the chat box, or tap any line on the menu board. Try:
 - `A large oat latte with an extra shot`
-- `Two small black coffees and an iced mocha`
+- `A cortado and an almond croissant`
+- `Two small cold brews and a honey oat latte`
 - `What's on the menu?` · `What's in my order?`
-- `Remove the mocha` · `Cancel my order`
-- `Place my order`
+- `Remove the croissant` · `Cancel my order`
+- `My name is Sam` · `Place my order`
 
 ### With AI agents in Chrome
 1. **Turn on WebMCP.** Open `chrome://flags/#enable-webmcp-testing`, set **WebMCP for testing** to **Enabled**, and click **Relaunch**. If the flag isn't listed, use Chrome Canary.
 2. **Check it's on.** Open the demo and click **How it works**. It should say *"Agent mode is on. 6 actions are available to AI agents in this browser."*
 3. **Install the inspector.** Add the **Model Context Tool Inspector** extension from the Chrome Web Store and open it on the demo tab. It should list the six tools above.
 4. **Run the tools:**
-   - `add_to_order` with `{"drink": "latte", "size": "large", "milk": "oat", "extraShot": true}`: the drink appears in **Your order**.
+   - `add_to_order` with `{"item": "latte", "size": "large", "milk": "oat", "extraShot": true}`: the drink appears in **Your order**. Food works too: `{"item": "almond_croissant"}`.
    - `view_order`: returns the order and the total.
-   - `add_to_order` with `{"drink": "unicorn"}`: returns an error the agent can act on.
-   - `place_order`: asks you to confirm, then the order tracker starts.
-5. **Agent run.** If the inspector offers an agent or model option, give it a goal such as *"Order me a large iced mocha and a small americano, then check out."* Watch the activity log under **How it works**.
+   - `add_to_order` with `{"item": "unicorn"}`: returns an error the agent can act on.
+   - `place_order` with `{"name": "Sam"}`: asks you to confirm, then the order tracker starts.
+5. **Agent run.** If the inspector offers an agent or model option, give it a goal such as *"Order me a large iced mocha and a blueberry scone for Sam, then check out."* Watch the activity log under **How it works**.
 
 ### Running it locally
 WebMCP needs a secure context. `http://localhost` counts; `file://` URLs and LAN IP addresses don't.
