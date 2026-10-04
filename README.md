@@ -15,7 +15,15 @@ This is a proof of concept for **WebMCP**, the draft web standard from the W3C W
 | `view_order` | **Imperative** | What's in the order and the total. Marked `readOnlyHint`. |
 | `remove_from_order` | **Imperative** | Removes one line from the order. |
 | `clear_order` | **Imperative** | Empties the order. Marked `destructiveHint`. |
-| `place_order` | **Imperative** | Places the order under an optional customer name, but only after the customer confirms. |
+| `asks_to_use_bathroom` | **Imperative** | Gives the restroom location and door code, and shows them on the page. Marked `readOnlyHint`. |
+| `place_order` | **Imperative** | Places the order under an optional customer name, but only after the customer confirms. Flags possible duplicates (see below). |
+
+## Duplicate check
+
+Agents retry, and customers repeat themselves, so the page checks for duplicates at two levels:
+
+- **Same order twice.** If an order with the same items is placed under the same name within 10 minutes, `place_order` doesn't place it. It returns an error explaining which earlier order it matches, and the page shows a **Possible duplicate order** notice with **Place it anyway** and **Keep editing** buttons. An agent can place the repeat order only by asking the customer and calling `place_order` again with `confirmDuplicate: true`. In the chat box, the customer says *"place it anyway"*.
+- **Same item twice.** Adding a line identical to one already in the order still works, since people do order two of the same drink. The new line is tagged **Possible duplicate**, and the tool result includes a `possibleDuplicate` note so the agent can check with the customer.
 
 ## The chat box
 
@@ -35,6 +43,16 @@ The "What can I get you?" box is the page's own small agent, and it uses the sam
 - **Lifecycle.** Tools are registered with an `AbortSignal` and removed on `pagehide`, with `unregisterTool()` as a fallback.
 - **Safety.** Text typed by users or produced by agents is written with `textContent`, never `innerHTML`.
 
+## Recommendations for adding WebMCP to a page
+
+Lessons from building and testing this demo:
+
+1. **Map page functions to tools 1:1.** Wrap the page's internal logic in high-level functions (`addToOrder`, `placeOrder`, `asksToUseBathroom`, …) and give each WebMCP tool exactly one of them. The chat box, the buttons and outside agents then all run the same code.
+2. **Don't assume side effects.** An agent doesn't click, scroll or type, so anything a person would normally set up through the UI has to be done explicitly by the tool. Here, `place_order` fills in the pickup name, and `asks_to_use_bathroom` shows its own notice, instead of relying on the user having done it.
+3. **Check for duplicates.** Agents retry calls and can repeat actions. Detect repeats, explain them in the tool result, and require explicit confirmation (`confirmDuplicate`) before doing the same thing twice.
+4. **Confirm risky actions with the person,** using `requestUserInteraction()` where available.
+5. **Return errors the agent can act on.** Say what went wrong and which tool or argument fixes it.
+
 ## Trying it
 
 ### In any browser
@@ -45,16 +63,21 @@ Open the live demo and type into the chat box, or tap any line on the menu board
 - `What's on the menu?` · `What's in my order?`
 - `Remove the croissant` · `Cancel my order`
 - `My name is Sam` · `Place my order`
+- `Can I use the bathroom?`
+
+**Duplicate check demo:** say `a large oat latte`, then `place my order for Sam`. Say `a large oat latte` and `place my order for Sam` again: the order is flagged as a possible duplicate and not placed. Say `place it anyway` (or press **Place it anyway**) to place it.
 
 ### With AI agents in Chrome
 1. **Turn on WebMCP.** Open `chrome://flags/#enable-webmcp-testing`, set **WebMCP for testing** to **Enabled**, and click **Relaunch**. If the flag isn't listed, use Chrome Canary.
-2. **Check it's on.** Open the demo and click **How it works**. It should say *"Agent mode is on. 6 actions are available to AI agents in this browser."*
-3. **Install the inspector.** Add the **Model Context Tool Inspector** extension from the Chrome Web Store and open it on the demo tab. It should list the six tools above.
+2. **Check it's on.** Open the demo and click **How it works**. It should say *"Agent mode is on. 7 actions are available to AI agents in this browser."*
+3. **Install the inspector.** Add the **Model Context Tool Inspector** extension from the Chrome Web Store and open it on the demo tab. It should list the seven tools above.
 4. **Run the tools:**
    - `add_to_order` with `{"item": "latte", "size": "large", "milk": "oat", "extraShot": true}`: the drink appears in **Your order**. Food works too: `{"item": "almond_croissant"}`.
    - `view_order`: returns the order and the total.
    - `add_to_order` with `{"item": "unicorn"}`: returns an error the agent can act on.
    - `place_order` with `{"name": "Sam"}`: asks you to confirm, then the order tracker starts.
+   - Add the same item again and run `place_order` with `{"name": "Sam"}`: returns a duplicate error and shows the notice. Run it with `{"name": "Sam", "confirmDuplicate": true}` to place it.
+   - `asks_to_use_bathroom`: returns the location and door code, and the page shows them under **Your order**.
 5. **Agent run.** If the inspector offers an agent or model option, give it a goal such as *"Order me a large iced mocha and a blueberry scone for Sam, then check out."* Watch the activity log under **How it works**.
 
 ### Running it locally

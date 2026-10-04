@@ -156,6 +156,13 @@
     .name-field { margin-top: 18px; }
     .order .btn.primary { width: 100%; margin-top: 12px; padding: 12px; }
     li.flash { animation: flash 1.2s ease-out; border-radius: 8px; }
+    .dupe-tag { display: inline-block; margin-left: 6px; padding: 0 7px; border: 1px solid var(--caramel); border-radius: 999px; color: var(--caramel); font-size: 11px; font-weight: 600; white-space: nowrap; }
+    .notice { margin-top: 14px; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--border); background: var(--surface-2); font-size: 14px; }
+    .notice[hidden] { display: none; }
+    .notice b { display: block; font-weight: 600; margin-bottom: 2px; }
+    .notice.warn { border-color: color-mix(in srgb, var(--caramel) 60%, var(--border)); background: #fbf1dc; }
+    .notice .notice-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .notice .btn { padding: 7px 14px; font-size: 13px; }
     @keyframes flash { from { background: var(--accent-soft); } to { background: transparent; } }
 
     .tracker { margin-top: 18px; padding: 14px 16px; border-radius: 14px; background: var(--surface-2); }
@@ -237,6 +244,7 @@
           <button class="chip" type="button">A cortado and an almond croissant</button>
           <button class="chip" type="button">What's on the menu?</button>
           <button class="chip" type="button">Place my order for Sam</button>
+          <button class="chip" type="button">Can I use the bathroom?</button>
         </div>
       </div>
       <div class="chat" id="chat" aria-live="polite"></div>
@@ -316,6 +324,18 @@
           <input id="order-name" type="text" maxlength="30" autocomplete="given-name" placeholder="Your name">
         </div>
         <button class="btn primary" id="place-btn" type="button">Place order</button>
+        <div class="notice warn" id="dupe-notice" role="alert" hidden>
+          <b id="dupe-title">Possible duplicate order</b>
+          <span id="dupe-text"></span>
+          <div class="notice-actions">
+            <button class="btn primary" id="dupe-place" type="button">Place it anyway</button>
+            <button class="btn" id="dupe-dismiss" type="button">Keep editing</button>
+          </div>
+        </div>
+        <div class="notice" id="restroom-notice" hidden>
+          <b>Restroom</b>
+          <span id="restroom-text"></span>
+        </div>
         <div class="tracker" id="tracker" hidden>
           <strong class="t-name" id="tracker-title"></strong>
           <div class="t-meta" id="tracker-meta"></div>
@@ -396,16 +416,29 @@
     const EXTRA_SHOT = 100;
     const byId = Object.fromEntries(MENU.map(d => [d.id, d]));
 
+    const RESTROOM = { location: 'down the hall, to the left of the pickup counter', code: '2468' };
+    const DUPLICATE_WINDOW_MS = 10 * 60 * 1000;
+
     const order = [];
+    const placedHistory = [];
     let nextLine = 1;
     let nextOrderNo = 101;
+    let pendingDuplicate = null;
     const timers = [];
 
     class ToolError extends Error { constructor(m) { super(m); this.name = 'ToolError'; } }
     const $ = s => document.querySelector(s);
     const money = c => `$${(c / 100).toFixed(2)}`;
     const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+    const toBool = v => v === true || v === 'true' || v === 'on';
     const orderTotal = () => order.reduce((n, l) => n + l.unitCents * l.quantity, 0);
+    // Two lines are "the same" when every option matches; quantity is compared separately.
+    const lineKey = l => JSON.stringify([l.item, l.size ?? null, l.milk ?? null, !!l.extraShot, !!l.iced]);
+    const orderSignature = () => order.map(l => `${l.quantity}x${lineKey(l)}`).sort().join('|');
+    function ago(ms) {
+      const s = Math.max(1, Math.round((Date.now() - ms) / 1000));
+      return s < 60 ? `${s} second${s === 1 ? '' : 's'} ago` : `${Math.round(s / 60)} minute${Math.round(s / 60) === 1 ? '' : 's'} ago`;
+    }
 
     function findItem(value) {
       const v = String(value ?? '').trim().toLowerCase().replace(/[\s-]+/g, '_');
@@ -456,13 +489,24 @@
         if (!(size in SIZES)) throw new ToolError('size must be regular or large.');
         milk = milk ? String(milk).toLowerCase() : d.milk;
         if (!(milk in MILKS)) throw new ToolError('milk must be whole, skim, oat, almond or none.');
-        const toBool = v => v === true || v === 'true' || v === 'on';
         line = { line: nextLine++, item: d.id, size, milk, quantity, extraShot: toBool(extraShot), iced: d.icedOnly || toBool(iced) };
         line.unitCents = d.cents + SIZES[size] + (milk !== d.milk ? MILKS[milk] : 0) + (line.extraShot ? EXTRA_SHOT : 0);
       }
+      // Duplicate check (line level): an identical line is still added, but flagged on the
+      // page and in the result, so an agent that added the same thing twice by mistake can
+      // tell the customer and undo it.
+      const same = order.find(l => lineKey(l) === lineKey(line));
+      if (same) line.dupeOf = same.line;
       order.push(line);
       render(line.line);
-      return { added: publicLine(line), orderTotal: money(orderTotal()) };
+      const result = { added: publicLine(line), orderTotal: money(orderTotal()) };
+      if (same) {
+        result.possibleDuplicate = {
+          ofLine: same.line,
+          message: `This matches line ${same.line} (${lineLabel(same)}). If it was added by mistake, remove line ${line.line}.`
+        };
+      }
+      return result;
     }
 
     function viewOrder() {
@@ -484,15 +528,58 @@
       return { cleared: count };
     }
 
-    function placeOrder({ name } = {}) {
-      if (!order.length) throw new ToolError('The order is empty. Add something first.');
+    function pickupName(name) {
       const who = String(name ?? '').trim() || $('#order-name').value.trim() || 'Guest';
       if (who.length > 30) throw new ToolError('name must be 30 characters or fewer.');
+      return who;
+    }
+
+    // Duplicate check (order level): the same items for the same name within 10 minutes
+    // is almost always a retry or a misunderstanding, so it is blocked until confirmed.
+    function findDuplicate(who) {
+      const sig = orderSignature();
+      return placedHistory.find(p => p.signature === sig && p.name.toLowerCase() === who.toLowerCase() && Date.now() - p.at < DUPLICATE_WINDOW_MS);
+    }
+    function assertNotDuplicate({ name, confirmDuplicate } = {}) {
+      if (!order.length || toBool(confirmDuplicate)) return;
+      const who = pickupName(name);
+      const dup = findDuplicate(who);
+      if (!dup) return;
+      showDuplicateNotice(dup, who);
+      throw new ToolError(`This looks like a duplicate of order #${dup.orderNumber} for ${dup.name}, which had the same items and was placed ${ago(dup.at)}. I didn't place it. To place a second identical order, say "place it anyway". (Agents: ask the customer first, then call place_order with confirmDuplicate: true.)`);
+    }
+
+    function placeOrder({ name, confirmDuplicate } = {}) {
+      if (!order.length) throw new ToolError('The order is empty. Add something first.');
+      const who = pickupName(name);
+      assertNotDuplicate({ name: who, confirmDuplicate });
+      const dup = findDuplicate(who);
       const placed = { orderNumber: nextOrderNo++, name: who, items: order.map(publicLine), total: money(orderTotal()), readyInMinutes: 3 };
+      if (dup) placed.duplicateOf = dup.orderNumber;
+      placedHistory.push({ orderNumber: placed.orderNumber, name: who, signature: orderSignature(), at: Date.now() });
       order.length = 0;
+      // Set the UI state a person would have set by hand, instead of assuming it is already there.
+      $('#order-name').value = who;
       render();
       track(placed);
       return placed;
+    }
+
+    function asksToUseBathroom() {
+      const message = `Of course! The restroom is ${RESTROOM.location}. The door code is ${RESTROOM.code}.`;
+      $('#restroom-text').textContent = `${cap(RESTROOM.location)}. Door code ${RESTROOM.code}.`;
+      $('#restroom-notice').hidden = false;
+      return { location: RESTROOM.location, doorCode: RESTROOM.code, message };
+    }
+
+    function showDuplicateNotice(dup, who) {
+      pendingDuplicate = { name: who };
+      $('#dupe-text').textContent = `Order #${dup.orderNumber} for ${dup.name} had the same items and was placed ${ago(dup.at)}. This one hasn't been placed.`;
+      $('#dupe-notice').hidden = false;
+    }
+    function hideDuplicateNotice() {
+      pendingDuplicate = null;
+      $('#dupe-notice').hidden = true;
     }
 
     function render(flashLine) {
@@ -503,6 +590,13 @@
         const name = document.createElement('span');
         name.innerHTML = `<span class="qty">${l.quantity} ×</span> `;
         name.append(lineLabel(l));
+        if (l.dupeOf && order.some(o => o.line === l.dupeOf)) {
+          const tag = document.createElement('span');
+          tag.className = 'dupe-tag';
+          tag.textContent = 'Possible duplicate';
+          tag.title = `Same as line ${l.dupeOf}`;
+          name.append(' ', tag);
+        }
         const price = document.createElement('span');
         price.textContent = money(l.unitCents * l.quantity);
         const x = document.createElement('button');
@@ -517,6 +611,7 @@
       if (!order.length) ul.innerHTML = '<li class="empty">Nothing yet. Ask for something or tap the menu.</li>';
       $('#total').textContent = money(orderTotal());
       $('#place-btn').disabled = !order.length;
+      hideDuplicateNotice();
     }
 
     function track(placed) {
@@ -630,8 +725,9 @@
       };
     }
 
-    async function confirmPlace(client) {
-      const ask = () => confirm(`An agent wants to place your order for ${money(orderTotal())}. Place it?`);
+    async function confirmPlace(client, input = {}) {
+      const second = toBool(input.confirmDuplicate) ? ' This is a second order with the same items as one you just placed.' : '';
+      const ask = () => confirm(`An agent wants to place your order for ${money(orderTotal())}.${second} Place it?`);
       const yes = client && typeof client.requestUserInteraction === 'function'
         ? await client.requestUserInteraction(async () => ask())
         : ask();
@@ -672,27 +768,49 @@
         execute: guarded('clear_order', clearOrder)
       },
       {
+        name: 'asks_to_use_bathroom',
+        description: 'Use when the customer asks to use the bathroom or restroom. Returns where it is and the door code, and shows them on the page.',
+        inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+        annotations: { readOnlyHint: true },
+        execute: guarded('asks_to_use_bathroom', asksToUseBathroom)
+      },
+      {
         name: 'place_order',
-        description: 'Submit the order for the customer. The customer is asked to confirm before it is placed.',
+        description: 'Submit the order for the customer. The customer is asked to confirm before it is placed. If the same items were ordered under the same name in the last 10 minutes, the order is flagged as a possible duplicate and not placed.',
         inputSchema: {
           type: 'object',
-          properties: { name: { type: 'string', maxLength: 30, description: "Customer's name for the order. Optional." } },
+          properties: {
+            name: { type: 'string', maxLength: 30, description: "Customer's name for the order. Optional." },
+            confirmDuplicate: { type: 'boolean', description: 'Set to true only after the customer confirms they want a second order identical to one they just placed.' }
+          },
           additionalProperties: false
         },
-        execute: guarded('place_order', async (input, client) => { await confirmPlace(client); return placeOrder(input); })
+        execute: guarded('place_order', async (input, client) => {
+          assertNotDuplicate(input);
+          await confirmPlace(client, input);
+          return placeOrder(input);
+        })
       }
     ];
 
+    // One command per page function (1:1). The chat box, the buttons and outside agents all
+    // call these, so every path runs the same code and updates the page the same way.
+    const AGENT_TOOLS = Object.fromEntries(TOOLS.map(t => [t.name, t.execute]));
     const COMMAND_TOOLS = {
       add_to_order: guarded('add_to_order', addToOrder),
-      get_menu: TOOLS[0].execute,
-      view_order: TOOLS[1].execute,
-      remove_from_order: TOOLS[2].execute,
-      clear_order: TOOLS[3].execute,
+      get_menu: AGENT_TOOLS.get_menu,
+      view_order: AGENT_TOOLS.view_order,
+      remove_from_order: AGENT_TOOLS.remove_from_order,
+      clear_order: AGENT_TOOLS.clear_order,
+      asks_to_use_bathroom: AGENT_TOOLS.asks_to_use_bathroom,
       place_order: guarded('place_order', placeOrder)
     };
 
     $('#place-btn').addEventListener('click', () => COMMAND_TOOLS.place_order());
+    $('#dupe-place').addEventListener('click', () => {
+      if (pendingDuplicate) COMMAND_TOOLS.place_order({ name: pendingDuplicate.name, confirmDuplicate: true });
+    });
+    $('#dupe-dismiss').addEventListener('click', hideDuplicateNotice);
 
     const itemForm = $('#item-form');
     const LEGACY_SUBMIT = new URLSearchParams(location.search).has('legacy');
@@ -808,10 +926,17 @@
       return items.map(i => i.args);
     }
 
-    const NOT_NAMES = /^(me|us|here|now|pickup|later|today|takeaway|there|you)$/i;
+    const NOT_NAMES = /^(me|us|here|now|pickup|later|today|takeaway|there|you|anyway|anyways|again)$/i;
+    const CONFIRM_DUP = /\b(anyway|anyways|a second (one|order)|another identical)\b/;
     function placeArgs(input) {
-      const m = input.trim().replace(/[.!?]+$/, '').match(/\bfor\s+([A-Za-z][A-Za-z'-]{1,29})$/);
-      return m && !NOT_NAMES.test(m[1]) ? { name: cap(m[1]) } : {};
+      const clean = input.trim().replace(/[.!?]+$/, '');
+      const m = clean.replace(/\s+(anyway|anyways|again)$/i, '').match(/\bfor\s+([A-Za-z][A-Za-z'-]{1,29})$/);
+      const args = m && !NOT_NAMES.test(m[1]) ? { name: cap(m[1]) } : {};
+      if (CONFIRM_DUP.test(clean.toLowerCase())) {
+        args.confirmDuplicate = true;
+        if (!args.name && pendingDuplicate) args.name = pendingDuplicate.name;
+      }
+      return args;
     }
 
     function lineRef(t) {
@@ -835,10 +960,11 @@
         if (!line) return { error: "I couldn't find that in your order." };
         return { steps: [{ tool: 'remove_from_order', args: { line } }] };
       }
+      if (/\b(bathroom|restroom|rest room|toilet|washroom|loo|wc|lavatory|ladies'? room|men'?s room)\b/.test(t)) return { steps: [{ tool: 'asks_to_use_bathroom', args: {} }] };
       if (/\b(cancel|clear|start over|empty|never ?mind|reset|scratch that)\b/.test(t)) return { steps: [{ tool: 'clear_order', args: {} }] };
       if (/\b(menu|what do you (have|serve|sell)|what drinks|options|prices?)\b/.test(t)) return { steps: [{ tool: 'get_menu', args: {} }] };
       const items = itemIn(t) ? parseOrderItems(t) : [];
-      const wantsPlace = /\b(place|checkout|check out|pay|submit|confirm|order it|send it|go ahead|that'?s (it|all))\b/.test(t) || /^(yes|yep|yeah|sure|ok|okay|done)\b/.test(t);
+      const wantsPlace = /\b(place|checkout|check out|pay|submit|confirm|order it|send it|go ahead|that'?s (it|all))\b/.test(t) || /^(yes|yep|yeah|sure|ok|okay|done)\b/.test(t) || CONFIRM_DUP.test(t);
       if (items.length) {
         const steps = items.map(args => ({ tool: 'add_to_order', args }));
         if (wantsPlace && /\b(and|then)\s+(place|order|checkout|check out|pay|submit)/.test(t)) steps.push({ tool: 'place_order', args: placeArgs(input) });
@@ -851,7 +977,10 @@
 
     function describe(tool, out) {
       switch (tool) {
-        case 'add_to_order': return `Added ${out.added.quantity} × ${out.added.item} (${out.added.price}).`;
+        case 'add_to_order':
+          return `Added ${out.added.quantity} × ${out.added.item} (${out.added.price}).` +
+            (out.possibleDuplicate ? `\nHeads up: you already have this on line ${out.possibleDuplicate.ofLine}. Say "remove line ${out.added.line}" if that was a mistake.` : '');
+        case 'asks_to_use_bathroom': return out.message;
         case 'get_menu':
           return [
             ...Object.entries(out.sections).map(([sec, items]) => `${sec}: ${items.map(i => `${i.name} ${i.price}`).join(', ')}`),
@@ -863,7 +992,8 @@
             : 'Your order is empty.';
         case 'remove_from_order': return `Removed ${out.removed}. New total ${out.orderTotal}.`;
         case 'clear_order': return out.cleared ? 'Cleared your order.' : 'Your order was already empty.';
-        case 'place_order': return `Order #${out.orderNumber} is in (${out.total}). Pickup for ${out.name}, ready in about ${out.readyInMinutes} minutes.`;
+        case 'place_order': return `Order #${out.orderNumber} is in (${out.total}). Pickup for ${out.name}, ready in about ${out.readyInMinutes} minutes.` +
+          (out.duplicateOf ? ` (A second order, as you asked. Order #${out.duplicateOf} is still coming too.)` : '');
       }
       return JSON.stringify(out);
     }
@@ -903,10 +1033,12 @@ Actions:
 - add_to_order: item (menu id, required), size, milk, extraShot, iced, quantity
 - view_order, get_menu, clear_order: no fields
 - remove_from_order: line (the line number from the current order)
-- place_order: name (optional, the customer's name)
+- asks_to_use_bathroom: no fields. Use when the customer asks for the bathroom or restroom.
+- place_order: name (optional, the customer's name), confirmDuplicate (true only if the customer clearly says they want a second identical order)
 Rules:
 - Only use items from the menu. If the customer is vague ("something sweet and cold"), choose a fitting item and say why in reply.
 - Only add place_order if the customer clearly asks to place, submit or check out.
+- Never set confirmDuplicate unless the customer explicitly confirms a repeat order.
 - If the message is not about ordering, return no steps and answer briefly in reply.
 - reply is one short, friendly sentence.`;
 
@@ -927,7 +1059,8 @@ Rules:
               iced: { type: 'boolean' },
               quantity: { type: 'integer', minimum: 1, maximum: 10 },
               line: { type: 'integer' },
-              name: { type: 'string' }
+              name: { type: 'string' },
+              confirmDuplicate: { type: 'boolean' }
             },
             required: ['tool']
           }
@@ -944,7 +1077,11 @@ Rules:
         return { tool: st.tool, args };
       }
       if (st.tool === 'remove_from_order') return { tool: st.tool, args: { line: st.line } };
-      if (st.tool === 'place_order') return { tool: st.tool, args: st.name ? { name: String(st.name).slice(0, 30) } : {} };
+      if (st.tool === 'place_order') {
+        const args = st.name ? { name: String(st.name).slice(0, 30) } : {};
+        if (st.confirmDuplicate === true) args.confirmDuplicate = true;
+        return { tool: st.tool, args };
+      }
       return { tool: st.tool, args: {} };
     }
 
@@ -1001,7 +1138,8 @@ Rules:
   "Two cold brews and a large chai"
   "What's on the menu?" · "What's in my order?"
   "Remove the croissant" · "Cancel my order"
-  "My name is Sam" · "Place my order"`;
+  "My name is Sam" · "Place my order"
+  "Can I use the bathroom?"`;
 
     const chat = $('#chat');
     function say(kind, text, via, isErr) {
